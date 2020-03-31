@@ -7,6 +7,13 @@ except ImportError:
     from PyQt4.QtCore import *
 
 
+def read(filename, default=None):
+    try:
+        with open(filename, 'rb') as f:
+            return f.read()
+    except:
+        return default
+
 class ZoomWidget(QSpinBox):
 
     def __init__(self, value=100):
@@ -18,6 +25,7 @@ class ZoomWidget(QSpinBox):
         self.setToolTip(u'Zoom Level')
         self.setStatusTip(self.toolTip())
         self.setAlignment(Qt.AlignCenter)
+
 
     def minimumSizeHint(self):
         height = super(ZoomWidget, self).minimumSizeHint().height()

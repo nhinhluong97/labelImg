@@ -39,13 +39,13 @@ class Shape(object):
     point_size = 8
     scale = 1.0
 
-    def __init__(self, label=None, subLabels=[], line_color=None, difficult=False, paintLabel=False):
+    # def __init__(self, label=None, subLabels=[], line_color=None, difficult=False, paintLabel=False):
+    def __init__(self, label=None, subLabels=[], line_color=None, paintLabel=False):
         self.label = label
         self.subLabels = subLabels
         self.points = []
         self.fill = False
         self.selected = False
-        self.difficult = difficult
         self.paintLabel = paintLabel
 
         self._highlightIndex = None
@@ -129,7 +129,8 @@ class Shape(object):
                         self.label = ""
                     if(min_y < MIN_Y_LABEL):
                         min_y += MIN_Y_LABEL
-                    painter.drawText(min_x, min_y, self.label)
+                    # painter.drawText(min_x, min_y, self.label)
+                    painter.drawText(min_x, min_y, '|'.join([self.label] + self.subLabels))
 
             if self.fill:
                 color = self.select_fill_color if self.selected else self.fill_color
@@ -196,7 +197,7 @@ class Shape(object):
         self._highlightIndex = None
 
     def copy(self):
-        shape = Shape("%s" % self.label)
+        shape = Shape("%s" % self.label, subLabels=self.subLabels)
         shape.points = [p for p in self.points]
         shape.fill = self.fill
         shape.selected = self.selected
@@ -205,7 +206,6 @@ class Shape(object):
             shape.line_color = self.line_color
         if self.fill_color != Shape.fill_color:
             shape.fill_color = self.fill_color
-        shape.difficult = self.difficult
         return shape
 
     def __len__(self):

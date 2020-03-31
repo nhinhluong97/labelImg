@@ -54,6 +54,8 @@ class LabelDialog(QDialog):
         self.layout.addWidget(bb, 2, 0)
         self.setLayout(self.layout)
         # self.show()
+        palette = ThisPalette()
+        self.setPalette(palette)
 
     def updateLayout(self):
         # for idx, lb in enumerate(self.listLabel):
@@ -134,17 +136,49 @@ class LabelDialog(QDialog):
 
 class trainDialog(QDialog):
 
-    def __init__(self, parent=None, listcheck=None):
+    def __init__(self, parent=None, listData=['a', 'c'], listPretrain=['c', 'd'], numEpoch=10):
         super(trainDialog, self).__init__(parent)
-        self.setWindowTitle('choose data to start training')
+        title = 'choose data to start training'
+        self.setWindowTitle(title)
 
-        self.listCheckBox = listcheck
+        self.listDataBox = len(listData)*['']
         grid = QGridLayout()
         self.choose = []
+        self.dataLabel = QLabel('Data folders')
+        grid.addWidget(self.dataLabel, 0, 1)
+        for i, v in enumerate(listData):
+            self.listDataBox[i] = QCheckBox(v)
+            grid.addWidget(self.listDataBox[i], i+1, 1)
 
-        for i, v in enumerate(self.listCheckBox):
-            self.listCheckBox[i] = QCheckBox(v)
-            grid.addWidget(self.listCheckBox[i], i, 0)
+        self.IncrementalLabel = QLabel('Incremental folder')
+        grid.addWidget(self.IncrementalLabel, 0, 0)
+        self.listIncremental = QComboBox(self)
+        for i, v in enumerate(listData):
+            self.listIncremental.addItem(v)
+        grid.addWidget(self.listIncremental,1, 0)
+
+        self.PretrainLabel = QLabel('Pretrain checkpoint')
+        grid.addWidget(self.PretrainLabel, 2, 0)
+        self.listPretrainBox = QComboBox(self)
+        for i, v in enumerate(listPretrain):
+            self.listPretrainBox.addItem(str(v))
+        grid.addWidget(self.listPretrainBox,3, 0)
+
+        self.numEpochLabel = QLabel('Number Epochs trainning')
+        grid.addWidget(self.numEpochLabel, 4, 0)
+        self.numEpochEdit = QLineEdit()
+        self.numEpochEdit.setPlaceholderText('number epoch')
+        self.numEpochEdit.setText('{}'.format(numEpoch))
+        self.numEpochEdit.setValidator(QIntValidator())
+        grid.addWidget(self.numEpochEdit, 5, 0)
+
+        self.prefixNameLabel = QLabel('prefix insert to folder checkpoint name')
+        grid.addWidget(self.numEpochLabel, 6, 0)
+        self.prefixNameEdit = QLineEdit()
+        self.prefixNameEdit.setPlaceholderText('run name')
+        self.prefixNameEdit.setText('{}'.format('normal'))
+        # self.numEpochEdit.setValidator(QIntValidator())
+        grid.addWidget(self.prefixNameEdit, 7, 0)
 
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
         bb.button(BB.Ok).setIcon(newIcon('done'))
@@ -155,16 +189,22 @@ class trainDialog(QDialog):
         bb.rejected.connect(self.reject)
         grid.addWidget(bb)
 
+        w_size = int(QFontMetrics(QFont()).width(title) * 1.6)
+
+        self.setMinimumWidth(w_size)
         self.setLayout(grid)
+        palette = ThisPalette()
+        self.setPalette(palette)
+
 
     def acceptTraining(self):
-        for i, v in enumerate(self.listCheckBox):
+        for i, v in enumerate(self.listDataBox):
             if v.checkState():
                 self.choose.append(v.text())
         self.accept()
 
     def get_synDir_chose(self):
-        return self.choose if self.exec_() else None
+        return (self.choose, self.listIncremental.currentText(), self.listPretrainBox.currentText(), int(self.numEpochEdit.text()), str(self.prefixNameEdit.text())) if self.exec_() else (None, None, None, None, None)
 
 class choose_checkpoint(QDialog):
 
@@ -189,8 +229,12 @@ class choose_checkpoint(QDialog):
         bb.accepted.connect(self.acceptCheckpoint)
         bb.rejected.connect(self.reject)
         grid.addWidget(bb)
+        self.resize(self.sizeHint())
 
         self.setLayout(grid)
+
+        palette = ThisPalette()
+        self.setPalette(palette)
 
     def acceptCheckpoint(self):
         v = self.ButtonGroup.checkedButton()
@@ -205,33 +249,321 @@ class choose_checkpoint(QDialog):
     def get_chose(self):
         return self.choose if self.exec_() else None
 
+class download_checkpoint(QDialog):
+
+    def __init__(self, parent=None, listcheck=None):
+        super(download_checkpoint, self).__init__(parent)
+        self.setWindowTitle('choose checkpoint want download')
+
+        self.listCheckBox = list(listcheck)
+        grid = QGridLayout()
+        self.choose = None
+        self.ButtonGroup = QButtonGroup()
+        for i, c in enumerate(self.listCheckBox):
+            self.listCheckBox[i] = QRadioButton(str(c))
+            self.ButtonGroup.addButton(self.listCheckBox[i])
+            grid.addWidget(self.listCheckBox[i], i, 0)
+
+        self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
+        bb.button(BB.Ok).setIcon(newIcon('done'))
+        bb.button(BB.Ok).setText('Choose')
+
+        bb.button(BB.Cancel).setIcon(newIcon('undo'))
+        bb.accepted.connect(self.acceptCheckpoint)
+        bb.rejected.connect(self.reject)
+        grid.addWidget(bb)
+        self.resize(self.sizeHint())
+
+        self.setLayout(grid)
+
+        palette = ThisPalette()
+        self.setPalette(palette)
+
+    def acceptCheckpoint(self):
+        v = self.ButtonGroup.checkedButton()
+        if v != 0:
+            self.choose = v.text()
+            print(self.choose)
+            self.accept()
+        else:
+            print("must choose")
+
+
+    def get_chose(self):
+        return self.choose if self.exec_() else None
+
+# class YouThread(QThread):
+#
+#     def __init__(self, parent=None, waitDialog = None, num=None):
+#         QThread.__init__(self, parent)
+#         self.threadactive = True
+#         self.num = num
+#         self.waitDialog = waitDialog
+#
+#     def run(self):
+#         while self.threadactive:
+#             self.waitDialog.setValue(self.waitDialog.num if self.waitDialog.value() != self.waitDialog.num else (self.waitDialog.num - 1))
+#             QtTest.QTest.qWait(50)
+#         # while True :
+#         #     print(self.num)
+#
+#     def stop(self):
+#         self.threadactive = False
+#         self.wait()
+
 # wait for down or upload
 class waitDialog(QProgressDialog):
-    def __init__(self, txtt = 'wait untill done', num=0, parent=None):
+    def __init__(self,title = 'waitting', txtt = 'wait untill done', num=0, parent=None, ):
         super(waitDialog, self).__init__(parent)
-        self.setWindowTitle('wait')
+        self.setWindowTitle(title)
         self.setLabelText(txtt)
         self.setSizeGripEnabled(False)
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setModal(True)
+        self.setAutoClose(False)
+        #
+        # self.btn = QPushButton('Ok')
         self.setCancelButton(None)
+        # self.btn.hide()
         self.show()
+
         self.num = num
-        QtTest.QTest.qWait(100)
-        self.setRange(0, num)
+        self.mess = None # "Data Loaded"
+        # QtTest.QTest.qWait(100)
+        self.setRange(0, self.num)
         self.setMinimumDuration(0)
-        self.setValue(0)
+        self.setValue(self.num)
+        palette = ThisPalette()
+        self.setPalette(palette)
+
+        self.delay(100)
+
+
+
+        # self.thread1 = YouThread(num=14, waitDialog=self)
+        # # thread1.connectNotify(s)
+        # self.thread1.start()
+
 
     def done_close(self):
         print('close')
+        if self.mess is not None:
+            QMessageBox.information(self, "Message", self.mess)
+        # self.thread1.stop()
         self.cancel()
-        # self.close()
 
     # can not cancel, wait until
     def closeEvent(self, event):
-        print('can not close')
+        print('can not cancel, wait until')
         event.ignore()
 
     def delay(self, s = 600):
         QtTest.QTest.qWait(s)
+
+
+
+class uploadDialog(QDialog):
+
+    def __init__(self, parent=None,  name=''):
+        super(uploadDialog, self).__init__(parent)
+        title = 'uploading'
+        self.setWindowTitle(title)
+
+        grid = QGridLayout()
+
+        self.nameLabel = QLabel('folder name to upload')
+        grid.addWidget(self.nameLabel, 4, 0)
+        self.nameEdit = QLineEdit()
+        self.nameEdit.setPlaceholderText('folder name to upload')
+        self.nameEdit.setText('{}'.format(name))
+        # self.nameEdit.setValidator(QIntValidator())
+        grid.addWidget(self.nameEdit)
+        print(type(self.nameEdit.text()))
+
+        self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
+        # bb.button(BB.Ok).setIcon(newIcon('done'))
+        # bb.button(BB.Ok).setText('Train')
+
+        # bb.button(BB.Cancel).setIcon(('undo'))
+        bb.accepted.connect(self.accept)
+        bb.rejected.connect(self.reject)
+        grid.addWidget(bb)
+
+        w_size = int(QFontMetrics(QFont()).width(title) * 1.6)
+
+        self.setMinimumWidth(w_size)
+        self.setLayout(grid)
+
+        palette = ThisPalette()
+        self.setPalette(palette)
+
+
+    def get_name(self):
+        return self.nameEdit.text() if self.exec_() else None
+
+
+class ThisPalette(QPalette):
+    def __init__(self):
+        super(ThisPalette, self).__init__()
+        # palette.setColor(QPalette.Window, QColor (179, 200, 200))
+        # palette.setColor(QPalette.Window, QColor (211, 238, 255))
+        self.setColor(QPalette.Window, QColor(150, 182, 197))
+        self.setColor(QPalette.Base, QColor(211, 238, 255))
+        # selfsetColor(QPalette.AlternateBase, QColor(53, 53, 53))
+        # selfsetColor(QPalette.ToolTipBase, QtCore.Qt.white)
+        # selfsetColor(QPalette.Text, QtCore.Qt.white)
+        self.setColor(QPalette.Button, QColor(211, 238, 255))
+        self.setColor(QPalette.ButtonText, Qt.black)
+        # selfsetColor(QPalette.BrightText, QtCore.Qt.red)
+        # self.setColor(QPalette.Highlight, QColor(211, 238, 255).lighter())
+        self.setColor(QPalette.HighlightedText, Qt.black)
+
+class TrainStatus(QDialog):
+    def __init__(self, checkpointDf=None, parent=None, isTraining=True):
+        super(TrainStatus, self).__init__(parent)
+
+        self.isStop = False
+        self.checkpointDf = checkpointDf
+        self.tableWidget = QTableWidget()
+        self.setData()
+        self.tableWidget.resize(self.tableWidget.sizeHint())
+
+        self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
+
+        bb.button(BB.Cancel).setIcon(newIcon('cancel'))
+        bb.button(BB.Cancel).setText('Stop train')
+
+        bb.button(BB.Ok).setIcon(newIcon('done'))
+        bb.button(BB.Ok).setText('Ok')
+
+        bb.accepted.connect(self.continueBtn)
+        bb.rejected.connect(self.stopbtn)
+
+        if isTraining:
+            bb.button(BB.Cancel).show()
+        else:
+            bb.button(BB.Cancel).hide()
+
+        # Add box layout, add table to box layout and add box layout to widget
+        self.layout = QGridLayout()
+        self.layout.addWidget(self.tableWidget)
+        self.setLayout(self.layout)
+        self.layout.addWidget(bb, 1, 0)
+
+        palette = ThisPalette()
+        self.setPalette(palette)
+
+    def stopbtn(self):
+        # stop trainning ?????????????????
+        self.isStop = True
+        self.accept()
+        return
+
+    def continueBtn(self):
+        # stop trainning ?????????????????
+        self.isStop = False
+        self.accept()
+        return
+
+    def chose_stop(self):
+        return self.isStop if self.exec() else None
+
+
+    def setData(self):
+        # Create table
+        ignoreKeys = 'fullPath'
+        self.tableWidget.setRowCount(self.checkpointDf.shape[0])
+
+        self.tableWidget.setColumnCount(self.checkpointDf.shape[1] - 1 if ignoreKeys in list(self.checkpointDf.keys()) else self.checkpointDf.shape[1])
+
+        # self.tableWidget.setRowCount(100)
+        # # self.tableWidget.setRowCount(self.checkpointDf.keys)
+        # self.tableWidget.setColumnCount(len(self.checkpointDf.keys))
+
+        horHeaders = []
+        colIndex = 0
+        for n, key in enumerate(self.checkpointDf.keys()):
+            if key == ignoreKeys:
+                continue
+            horHeaders.append(key)
+            for m, item in enumerate(self.checkpointDf[key]):
+                newitem = QTableWidgetItem(str(item))
+                # newitem.setEdit
+                # item.setFlags(Qt.ItemIsEnabled)
+                self.tableWidget.setItem(m, colIndex, newitem)
+                if key != 'note':
+                    newitem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            colIndex +=1
+
+        self.tableWidget.setHorizontalHeaderLabels(horHeaders)
+
+        self.tableWidget.verticalHeader().setVisible(False)
+        self.tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+
+
+    def chose_stop(self, list_text=None, move=True):
+        return self.isStop if self.exec() else None
+
+    def genData(self):
+
+        import pandas as pd
+        df = pd.DataFrame(columns=('name', 'loss', 'time', 'best'))
+        df = df.append([{'name': 'None', 'time': 'nadfffffffff', 'loss': 'nfffffffffffffffffffffffffffffffffffffffffffff', 'best': 'None'}])
+        df = df.append([{'name': 'None', 'time': 'None', 'loss': 'None', 'best': 'None'}])
+        df = df.append([{'name': 'None', 'time': 'None', 'loss': 'None', 'best': 'None'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
+        return df
+
+
 

@@ -116,9 +116,10 @@ class YoloReader:
     def getShapes(self):
         return self.shapes
 
-    def addShape(self, label, subLabel, x1, y1, x2, y2, x3, y3, x4, y4, difficult):
+    # def addShape(self, label, subLabel, x1, y1, x2, y2, x3, y3, x4, y4, difficult):
+    def addShape(self, label, subLabel, x1, y1, x2, y2, x3, y3, x4, y4):
         points = [(x1, y1), (x2, y2), (x3, y3), (x4, y4)]
-        self.shapes.append((label, subLabel, points, None, None, difficult))
+        self.shapes.append((label, subLabel, points, None, None))
     #
     # def yoloLine2Shape(self, classIndex, xcen, ycen, w, h):
     #     # label = self.classes[int(classIndex)]
@@ -149,4 +150,5 @@ class YoloReader:
                 label = labels
                 subLabel = []
 
-            self.addShape(label, subLabel,  int(x1), int(y1), int(x2), int(y2), int(x3), int(y3), int(x4), int(y4), False)
+            self.addShape(label, subLabel,  int(x1), int(y1), int(x2), int(y2), int(x3), int(y3), int(x4), int(y4))
+            # self.addShape(label, subLabel,  int(x1), int(y1), int(x2), int(y2), int(x3), int(y3), int(x4), int(y4), False)

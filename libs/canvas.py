@@ -20,6 +20,12 @@ CURSOR_GRAB = Qt.OpenHandCursor
 
 # class Canvas(QGLWidget):
 
+def read(filename, default=None):
+    try:
+        with open(filename, 'rb') as f:
+            return f.read()
+    except:
+        return default
 
 class Canvas(QWidget):
     zoomRequest = pyqtSignal(int)
@@ -60,9 +66,13 @@ class Canvas(QWidget):
         # Set widget options.
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.WheelFocus)
-        self.verified = False
         self.drawSquare = False
         self.__isShiftPressed = False
+
+        bpixmap = read('/home/aimenext/Downloads/img/image_2020_02_26T04_33_49_621Z.png', None)
+        backpixmap = QImage.fromData(bpixmap)
+        # backpixmap = backpixmap.scaled(self.size())
+        self.backgroundpixmap = QPixmap.fromImage(backpixmap)
 
     def setDrawingColor(self, qColor):
         self.drawingLineColor = qColor
@@ -606,17 +616,12 @@ class Canvas(QWidget):
             p.drawLine(0, self.prevPoint.y(), self.pixmap.width(), self.prevPoint.y())
 
         self.setAutoFillBackground(True)
-        if self.verified:
-            pal = self.palette()
-            # pal.setColor(self.backgroundRole(), QColor(184, 239, 38, 128))
-            pal.setColor(self.backgroundRole(),QColor(179, 200, 200))
-            self.setPalette(pal)
-        else:
-            pal = self.palette()
-            pal.setColor(self.backgroundRole(),  QColor(211, 238, 255))
-            # pal.setColor(self.backgroundRole(), QColor(232, 232, 232, 255))
-            self.setPalette(pal)
+        # self.backgroundpixmap = self.backgroundpixmap.scaled(self.width(), self.height() ) #, Qt.FastTransformation) # Qt.KeepAspectRatio,
 
+        pal = self.palette()
+        pal.setColor(self.backgroundRole(),QColor(211, 238, 255))
+        # pal.setBrush(QPalette.Background, QBrush(self.backgroundpixmap))
+        self.setPalette(pal)
         p.end()
 
     def transformPos(self, point):
@@ -744,7 +749,6 @@ class Canvas(QWidget):
     def keyPressEvent(self, ev):
         key = ev.key()
         if key == Qt.Key_Escape and self.current:
-            print('ESC press')
             self.current = None
             self.drawingPolygon.emit(False)
             self.update()
