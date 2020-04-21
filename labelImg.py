@@ -693,13 +693,13 @@ class MainWindow(QMainWindow, WindowMixin):
             return
 
         if item.childCount() == 0 and item.parent() is not None:
-            print('parent')
+            # print('parent')
             item = item.parent()
 
         shape = self.itemsToShapes[item]
         dialog = LabelDialog(label= shape.label, subLabels=shape.subLabels)
         subLabels, saveData = dialog.popUp()
-        print(saveData)
+        # print(saveData)
         if subLabels is not None:
             text , sublabels = subLabels[0], subLabels[1:]
             if text is not None:
@@ -718,7 +718,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.setDirty()
 
                 if saveData:
-                    print('save data')
+                    # print('save data')
                     self.dataSublabel[shape.label] = [shape.subLabels, self.convert_points_list(shape.points)]
 
     # Tzutalin 20160906 : Add file list and dock to move faster
@@ -778,7 +778,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.actions.shapeFillColor.setEnabled(selected)
 
     def addLabel(self, shape):
-        print('addLabel')
+        # print('addLabel')
         shape.paintLabel = self.displayLabelOption.isChecked()
         item = HashableQTreeWidgetItem(self.labelList) # HashableQListWidgetItem(shape.label)
 
@@ -868,12 +868,12 @@ class MainWindow(QMainWindow, WindowMixin):
                                                                        int(data['points'][3][0]),int(data['points'][3][1]),\
                                                                        data['label'], '|'.join(data['subLabels'])))
             if self.saveFormatCBox.checkState():
-                if data['label'] == 'MODEL':
-                    print(data['label'] )
-                    print([[int(data['points'][0][0]), int(data['points'][0][1])],
-                                                    [int(data['points'][1][0]), int(data['points'][1][1])],
-                                                    [int(data['points'][2][0]), int(data['points'][2][1])],
-                                                    [int(data['points'][3][0]), int(data['points'][3][1])]] )
+                # if data['label'] == 'MODEL':
+                    # print(data['label'] )
+                    # print([[int(data['points'][0][0]), int(data['points'][0][1])],
+                    #                                 [int(data['points'][1][0]), int(data['points'][1][1])],
+                    #                                 [int(data['points'][2][0]), int(data['points'][2][1])],
+                    #                                 [int(data['points'][3][0]), int(data['points'][3][1])]] )
                 self.dataSublabel[data['label']] = [data['subLabels'],
                                                     [[int(data['points'][0][0]), int(data['points'][0][1])],
                                                     [int(data['points'][1][0]), int(data['points'][1][1])],
@@ -887,7 +887,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.shapeSelectionChanged(True)
 
     def labelSelectionChanged(self):
-        print('labelSelectionChanged')
+        # print('labelSelectionChanged')
         item = self.currentItem()
 
         if item and self.canvas.editing():
@@ -904,12 +904,12 @@ class MainWindow(QMainWindow, WindowMixin):
     def labelItemChanged(self, item):
 
         try:
-            print('labelItemChanged')
+            # print('labelItemChanged')
             shape = self.itemsToShapes[item]
         except:
             return
         label = item.text(0)
-        print(label)
+        # print(label)
         if label != shape.label:
             shape.label = item.text(0)
             shape.line_color = generateColorByText(shape.label)
@@ -1059,7 +1059,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if subLabels is not None:
             text = subLabels[0]
             subLabels = subLabels[1:]
-            print('text:', text)
+            # print('text:', text)
             self.lastLabel = text
             self.prevLabelText = text
 
@@ -1075,11 +1075,11 @@ class MainWindow(QMainWindow, WindowMixin):
             self.setDirty()
 
             if saveData:
-                print('save new data')
+                # print('save new data')
                 self.dataSublabel[shape.label] = [shape.subLabels, self.convert_points_list(shape.points)]
 
         else:
-            print('canvas.resetAllLines()')
+            # print('canvas.resetAllLines()')
             # self.canvas.undoLastLine()
             self.canvas.resetAllLines()
 
@@ -1214,12 +1214,12 @@ class MainWindow(QMainWindow, WindowMixin):
 
             # Label xml file and show bound box according to its filename
             # if self.usingPascalVocFormat is True:
+
             if self.defaultSaveDir is not None:
                 basename = os.path.basename(
                     os.path.splitext(self.filePath)[0])
                 # xmlPath = os.path.join(self.defaultSaveDir, basename + XML_EXT)
                 txtPath = os.path.join(self.defaultSaveDir, basename + TXT_EXT)
-
                 """Annotation file priority:
                 PascalXML > YOLO
                 """
@@ -1231,7 +1231,6 @@ class MainWindow(QMainWindow, WindowMixin):
                 txtPath = os.path.splitext(filePath)[0] + TXT_EXT
                 basename = os.path.basename(
                     os.path.splitext(self.filePath)[0])
-
                 if os.path.isfile(txtPath):
                     self.loadYOLOTXTByFilename(txtPath)
                 else:
@@ -1617,7 +1616,7 @@ class MainWindow(QMainWindow, WindowMixin):
             else:
                 print('synDirs_chose is None')
         except:
-            wai = waitDialog('can not connect server', num=0)
+            wai = waitDialog(txtt='can not connect server', num=0)
             wai.delay(1000)
             wai.done_close()
 
@@ -1678,13 +1677,13 @@ class MainWindow(QMainWindow, WindowMixin):
                 self._saveFile(savedPath)
         else:
             print('1611: saveFileDialog')
-            savedPath = self.saveFileDialog(removeExt=False)
+            savedPath = self.saveFileDialog(removeExt=True)
             self.defaultSaveDir = os.path.dirname(savedPath)
             self._saveFile(savedPath)
 
     def saveFileAs(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
-        savedPath = self.saveFileDialog(removeExt=False)
+        savedPath = self.saveFileDialog(removeExt=True)
         self.defaultSaveDir = os.path.dirname(savedPath)
         self._saveFile(savedPath)
 
@@ -1696,7 +1695,7 @@ class MainWindow(QMainWindow, WindowMixin):
         dlg = QFileDialog(self, caption, openDialogPath, filters)
         dlg.setDefaultSuffix(filters[1:])
         dlg.setAcceptMode(QFileDialog.AcceptSave)
-        filenameWithoutExtension = os.path.splitext(self.filePath)[0]
+        filenameWithoutExtension = os.path.splitext(self.filePath)[0] + '.txt'
         dlg.selectFile(filenameWithoutExtension)
         dlg.setOption(QFileDialog.DontUseNativeDialog, False)
         if dlg.exec_():
@@ -1705,6 +1704,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 return os.path.splitext(fullFilePath)[0] # Return file path without the extension.
             else:
                 return fullFilePath
+
         return ''
 
     def _saveFile(self, annotationFilePath):
@@ -1848,7 +1848,6 @@ class MainWindow(QMainWindow, WindowMixin):
         overlap_v = min(xi3, xj3) - max(xi1, xj1)
         if overlap_v >= v_min*0.8 and overlap_v >= v_max*0.5:
             merge_v = True
-        print(merge_h, merge_v)
         return merge_v and merge_h
 
     def onlyPosition(self, points):
@@ -1892,8 +1891,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 points.append(QPointF(x, y))
 
             subLabel = self.preDictSubLabel(label, points)
-            if label == 'COLOR' or label=='MOTOR' or label=='JAPAN':
-                print(subLabel)
+
             shape = Shape(label=label, subLabels=subLabel)
             shape.points = points
             # shape.difficult = difficult
@@ -1918,7 +1916,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
 
     def beginFromRef(self, baseName):
-        print('beginFromRef')
+        # print('beginFromRef')
         if os.path.isfile(os.path.join(self.refDir,'{}.txt'.format(baseName))):
             if self.shapesRefs:
                 self.hint_shapes_from_shapesRefs(self.shapesRefs)

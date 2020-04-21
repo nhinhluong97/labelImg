@@ -22,9 +22,7 @@ def zipdirImgs(imgpath, zipout):
     allowExtend = ['.jpg', '.JPG', '.png', '.PNG', '.jpeg', '.JPEG']
     ziph = zipfile.ZipFile(zipout, "w", zipfile.ZIP_DEFLATED)
     for f in os.listdir(imgpath):
-        print(f, os.path.splitext(f)[-1])
         if os.path.splitext(f)[-1] in allowExtend:
-            print('f', f)
             ziph.write(os.path.join(imgpath,f), f)
 
 def upload_file(filename):
