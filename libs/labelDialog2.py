@@ -53,9 +53,6 @@ class LabelDialog(QDialog):
         # self.layout.addWidget(self.addBtn, 1, 1)
         self.layout.addWidget(bb, 2, 0)
         self.setLayout(self.layout)
-        # self.show()
-        palette = ThisPalette()
-        self.setPalette(palette)
 
     def updateLayout(self):
         # for idx, lb in enumerate(self.listLabel):
@@ -136,7 +133,7 @@ class LabelDialog(QDialog):
 
 class trainDialog(QDialog):
 
-    def __init__(self, parent=None, listData=['a', 'c'], listPretrain=['c', 'd'], numEpoch=10):
+    def __init__(self, parent=None, listData=['a', 'c'], listPretrain=['c', 'd'],listnote=['c', 'd'], numEpoch=10):
         super(trainDialog, self).__init__(parent)
         title = 'choose data to start training'
         self.setWindowTitle(title)
@@ -160,8 +157,9 @@ class trainDialog(QDialog):
         self.PretrainLabel = QLabel('Pretrain checkpoint')
         grid.addWidget(self.PretrainLabel, 2, 0)
         self.listPretrainBox = QComboBox(self)
-        for i, v in enumerate(listPretrain):
-            self.listPretrainBox.addItem(str(v))
+        self.listPretrain = listPretrain
+        for i, (v, note) in enumerate(zip(listPretrain, listnote)):
+            self.listPretrainBox.addItem( '{} ({})'.format(v, note))
         grid.addWidget(self.listPretrainBox,3, 0)
 
         self.numEpochLabel = QLabel('Number Epochs trainning')
@@ -193,8 +191,6 @@ class trainDialog(QDialog):
 
         self.setMinimumWidth(w_size)
         self.setLayout(grid)
-        palette = ThisPalette()
-        self.setPalette(palette)
 
 
     def acceptTraining(self):
@@ -204,7 +200,8 @@ class trainDialog(QDialog):
         self.accept()
 
     def get_synDir_chose(self):
-        return (self.choose, self.listIncremental.currentText(), self.listPretrainBox.currentText(), int(self.numEpochEdit.text()), str(self.prefixNameEdit.text())) if self.exec_() else (None, None, None, None, None)
+        return (self.choose, self.listIncremental.currentText(), self.listPretrain[self.listPretrainBox.currentIndex()], int(self.numEpochEdit.text()), str(self.prefixNameEdit.text())) if self.exec_() else (None, None, None, None, None)
+        # return (self.choose, self.listIncremental.currentText(), self.listPretrainBox.currentText(), int(self.numEpochEdit.text()), str(self.prefixNameEdit.text())) if self.exec_() else (None, None, None, None, None)
 
 class choose_checkpoint(QDialog):
 
@@ -233,8 +230,6 @@ class choose_checkpoint(QDialog):
 
         self.setLayout(grid)
 
-        palette = ThisPalette()
-        self.setPalette(palette)
 
     def acceptCheckpoint(self):
         v = self.ButtonGroup.checkedButton()
@@ -276,8 +271,6 @@ class download_checkpoint(QDialog):
 
         self.setLayout(grid)
 
-        palette = ThisPalette()
-        self.setPalette(palette)
 
     def acceptCheckpoint(self):
         v = self.ButtonGroup.checkedButton()
@@ -333,8 +326,6 @@ class waitDialog(QProgressDialog):
         self.setRange(0, self.num)
         self.setMinimumDuration(0)
         self.setValue(self.num)
-        palette = ThisPalette()
-        self.setPalette(palette)
 
         self.delay(100)
 
@@ -394,29 +385,10 @@ class uploadDialog(QDialog):
         self.setMinimumWidth(w_size)
         self.setLayout(grid)
 
-        palette = ThisPalette()
-        self.setPalette(palette)
-
 
     def get_name(self):
         return self.nameEdit.text() if self.exec_() else None
 
-
-class ThisPalette(QPalette):
-    def __init__(self):
-        super(ThisPalette, self).__init__()
-        # palette.setColor(QPalette.Window, QColor (179, 200, 200))
-        # palette.setColor(QPalette.Window, QColor (211, 238, 255))
-        self.setColor(QPalette.Window, QColor(150, 182, 197))
-        self.setColor(QPalette.Base, QColor(211, 238, 255))
-        # selfsetColor(QPalette.AlternateBase, QColor(53, 53, 53))
-        # selfsetColor(QPalette.ToolTipBase, QtCore.Qt.white)
-        # selfsetColor(QPalette.Text, QtCore.Qt.white)
-        self.setColor(QPalette.Button, QColor(211, 238, 255))
-        self.setColor(QPalette.ButtonText, Qt.black)
-        # selfsetColor(QPalette.BrightText, QtCore.Qt.red)
-        # self.setColor(QPalette.Highlight, QColor(211, 238, 255).lighter())
-        self.setColor(QPalette.HighlightedText, Qt.black)
 
 class TrainStatus(QDialog):
     def __init__(self, checkpointDf=None, parent=None, isTraining=True):
@@ -450,8 +422,6 @@ class TrainStatus(QDialog):
         self.setLayout(self.layout)
         self.layout.addWidget(bb, 1, 0)
 
-        palette = ThisPalette()
-        self.setPalette(palette)
 
     def stopbtn(self):
         # stop trainning ?????????????????
@@ -464,9 +434,6 @@ class TrainStatus(QDialog):
         self.isStop = False
         self.accept()
         return
-
-    def chose_stop(self):
-        return self.isStop if self.exec() else None
 
 
     def setData(self):
@@ -503,8 +470,20 @@ class TrainStatus(QDialog):
 
 
 
-    def chose_stop(self, list_text=None, move=True):
-        return self.isStop if self.exec() else None
+    def chose_stop(self):
+        return( self.isStop, self.get_note()) if self.exec() else (None, None)
+
+    def get_note(self):
+        notes = []
+        # loop through headers and find column number for given column name
+        headercount = self.tableWidget.columnCount()
+        for row in range(0, self.tableWidget.rowCount(), 1):
+            for collum in range(0, headercount, 1):
+                headertext = self.tableWidget.horizontalHeaderItem(collum).text()
+                if 'note' == headertext:
+                    cell = self.tableWidget.item(row, collum).text()  # get cell at row, col
+                    notes.append(cell)
+        return notes
 
     def genData(self):
 

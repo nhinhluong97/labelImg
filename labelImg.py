@@ -1,27 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import codecs
-import distutils.spawn
 import os.path
 import platform
-import re
 import sys
 import subprocess
+from qtmodern import styles, windows
 
 from functools import partial
-from collections import defaultdict
 
 try:
     from PyQt5.QtGui import *
     from PyQt5.QtCore import *
     from PyQt5.QtWidgets import *
 except ImportError:
-    # needed for py3+qt4
-    # Ref:
-    # http://pyqt.sourceforge.net/Docs/PyQt4/incompatible_apis.html
-    # http://stackoverflow.com/questions/21217399/pyqt4-qtcore-qvariant-object-instead-of-a-string
     if sys.version_info.major >= 3:
         import sip
+
         sip.setapi('QVariant', 2)
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
@@ -36,19 +31,20 @@ from libs.canvas import Canvas
 from libs.zoomWidget import ZoomWidget
 from libs.colorDialog import ColorDialog
 from libs.toolBar import ToolBar
-from libs.pascal_voc_io import PascalVocReader
-from libs.pascal_voc_io import XML_EXT
 from libs.yolo_io import YoloReader
 from libs.yolo_io import TXT_EXT
 from libs.ustr import ustr
 from libs.hashableQListWidgetItem import HashableQTreeWidgetItem
 from libs.labelDialog2 import *
+from libs.custom_widget import QCustomQWidget
 import dowloadAPI
 
 # from libs.treeLabelWidget import TreeLabel
 
 __appname__ = 'labelImg'
 TXT_SUFFIX = '.txt'
+
+
 class WindowMixin(object):
 
     def menu(self, title, actions=None):
@@ -67,21 +63,22 @@ class WindowMixin(object):
         self.addToolBar(Qt.LeftToolBarArea, toolbar)
         return toolbar
 
+
 class ThisPalette(QPalette):
     def __init__(self):
         super(ThisPalette, self).__init__()
         # palette.setColor(QPalette.Window, QColor (179, 200, 200))
         # palette.setColor(QPalette.Window, QColor (211, 238, 255))
-        self.setColor(QPalette.Window, QColor(150, 182, 197))
-        self.setColor(QPalette.Base, QColor(211, 238, 255))
+        # self.setColor(QPalette.Window, QColor(150, 182, 197))
+        # self.setColor(QPalette.Base, QColor(255, 255, 255))
         # selfsetColor(QPalette.AlternateBase, QColor(53, 53, 53))
         # selfsetColor(QPalette.ToolTipBase, QtCore.Qt.white)
         # selfsetColor(QPalette.Text, QtCore.Qt.white)
-        self.setColor(QPalette.Button, QColor(211, 238, 255))
-        self.setColor(QPalette.ButtonText, QtCore.Qt.black)
+        # self.setColor(QPalette.Button, QColor(211, 238, 255))
+        # self.setColor(QPalette.ButtonText, QtCore.Qt.black)
         # selfsetColor(QPalette.BrightText, QtCore.Qt.red)
-        self.setColor(QPalette.Highlight, QColor(142, 45, 197).lighter())
-        self.setColor(QPalette.HighlightedText, QtCore.Qt.black)
+        # self.setColor(QPalette.Highlight, QColor(142, 45, 197).lighter())
+        # self.setColor(QPalette.HighlightedText, QtCore.Qt.black)
 
 
 class MainWindow(QMainWindow, WindowMixin):
@@ -95,7 +92,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.settings = Settings()
         self.settings.load()
         settings = self.settings
-
 
         palette = ThisPalette()
         self.setPalette(palette)
@@ -127,11 +123,15 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self._noSelectionSlot = False
         self._beginner = True
-        self.screencastViewer = self.getAvailableScreencastViewer()
-        self.screencast = "https://youtu.be/p0nR2YsCY_U"
+        # self.screencastViewer = self.getAvailableScreencastViewer()
+        # self.screencast = "https://youtu.be/p0nR2YsCY_U"
 
         # Load predefined classes to the list
         self.loadPredefinedClasses(defaultPrefdefClassFile)
+        if not os.path.exists(os.path.join(os.getcwd(), 'datasets')):
+            os.mkdir(os.path.join(os.getcwd(), 'datasets'))
+        if not os.path.exists(os.path.join(os.getcwd(), 'datasets/detect_label/')):
+            os.mkdir(os.path.join(os.getcwd(), 'datasets/detect_label/'))
 
         # Main widgets and related state.
         self.labelDialog = LabelDialog(parent=self, label='here', subLabels=['here2', 'here3'])
@@ -202,7 +202,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.canvas.zoomRequest.connect(self.zoomRequest)
         self.canvas.setDrawingShapeToSquare(settings.get(SETTING_DRAW_SQUARE, False))
 
-
         scroll = QScrollArea()
         scroll.setWidget(self.canvas)
         scroll.setWidgetResizable(True)
@@ -232,22 +231,22 @@ class MainWindow(QMainWindow, WindowMixin):
                       'Ctrl+Q', 'quit', getStr('quitApp'))
 
         upLoadBtn = action('Upload', self.upLoadBtn,
-                      'Ctrl+l', 'upload', 'completed upload to sever')
+                           'Ctrl+l', 'upload', 'completed upload to sever')
 
-        download = action('download', self.download,
+        download = action('hint', self.download,
                       'Ctrl+x', 'download', 'download hint from sever')
 
         train = action('train', self.train,
-                      'Ctrl+t', 'train', 'choose data and train')
+                       'Ctrl+t', 'train', 'choose data and train')
 
         trainStatus = action('train status', self.trainning_status,
-                      'Ctrl+z', 'trainStatus', 'trainning status')
+                             'Ctrl+z', 'trainStatus', 'trainning status')
 
-        checkpoint= action('checkpoint', self.choose_checkpoint,
-                      None, None, 'choose checkpoint will use')
+        checkpoint= action('switch_checkpoint', self.choose_checkpoint,
+                      None, 'switch_checkpoint', 'choose checkpoint will use')
 
         downloadCheckpoint= action('download checkpoint', self.download_checkpoint,
-                      None, None, 'choose checkpoint will download')
+                      None, 'download', 'choose checkpoint will download')
 
 
         opendir = action(getStr('openDir'), self.openDirDialog,
@@ -281,7 +280,7 @@ class MainWindow(QMainWindow, WindowMixin):
         createMode = action(getStr('crtBox'), self.setCreateMode,
                             'w', 'new', getStr('crtBoxDetail'), enabled=False)
         editMode = action('&Edit\nRectBox', self.setEditMode,
-                          'Ctrl+J', 'edit', u'Move and edit Boxs', enabled=False)
+                          'e', 'edit', u'Move and edit Boxs', enabled=False)
 
         create = action(getStr('crtBox'), self.createShape,
                         'w', 'new', getStr('crtBoxDetail'), enabled=False)
@@ -368,7 +367,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.drawSquaresOption.triggered.connect(self.toogleDrawSquare)
 
         # Store actions for further handling.
-        self.actions = struct(save=save, saveAs=saveAs, close=close, resetAll = resetAll,
+        self.actions = struct(save=save, saveAs=saveAs, close=close, resetAll=resetAll,
                               lineColor=color1, create=create, delete=delete, edit=edit, copy=copy,
                               createMode=createMode, editMode=editMode, advancedMode=advancedMode,
                               shapeLineColor=shapeLineColor, shapeFillColor=shapeFillColor,
@@ -414,9 +413,9 @@ class MainWindow(QMainWindow, WindowMixin):
         self.displayLabelOption.triggered.connect(self.togglePaintLabelsOption)
 
         addActions(self.menus.file,
-                   ( opendir, changeSavedir, openAnnotation, self.menus.recentFiles, save,  saveAs, close, resetAll, quit))
+                   (opendir, changeSavedir, openAnnotation, self.menus.recentFiles, save, saveAs, close, resetAll, quit))
         addActions(self.menus.help, (help, showInfo))
-        addActions(self.menus.sever, (download, upLoadBtn, train, checkpoint,downloadCheckpoint, trainStatus))
+        addActions(self.menus.sever, (download, upLoadBtn, train, checkpoint, downloadCheckpoint, trainStatus))
         addActions(self.menus.view, (
             self.autoSaving,
             self.singleClassMode,
@@ -436,11 +435,11 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.tools = self.toolbar('Tools')
         self.actions.beginner = (
-            opendir, changeSavedir, openNextImg, openPrevImg,  save, download, upLoadBtn, train, trainStatus, create,  None, copy, delete, None,
+            opendir, changeSavedir, openNextImg, openPrevImg, save, download, upLoadBtn, train, trainStatus, create, None, copy, delete, None,
             zoomIn, zoom, zoomOut, fitWindow, fitWidth, checkpoint, downloadCheckpoint)
 
         self.actions.advanced = (
-            opendir, changeSavedir, openNextImg, openPrevImg, save, download, upLoadBtn, train, trainStatus, createMode,  None,
+            opendir, changeSavedir, openNextImg, openPrevImg, save, download, upLoadBtn, train, trainStatus, createMode, None,
             editMode, None,
             hideAll, showAll, checkpoint, downloadCheckpoint)
 
@@ -487,6 +486,7 @@ class MainWindow(QMainWindow, WindowMixin):
         Shape.line_color = self.lineColor = QColor(settings.get(SETTING_LINE_COLOR, DEFAULT_LINE_COLOR))
         Shape.fill_color = self.fillColor = QColor(settings.get(SETTING_FILL_COLOR, DEFAULT_FILL_COLOR))
         self.canvas.setDrawingColor(self.lineColor)
+
         # Add chris
         # Shape.difficult = self.difficult
 
@@ -527,7 +527,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Control:
-            # ??????
             # Draw rectangle if Ctrl is pressed
             self.canvas.setDrawingShapeToSquare(True)
 
@@ -556,7 +555,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.canvas.menus[0].clear()
         addActions(self.canvas.menus[0], menu)
         self.menus.edit.clear()
-        actions = (self.actions.create,) if self.beginner()\
+        actions = (self.actions.create,) if self.beginner() \
             else (self.actions.createMode, self.actions.editMode)
         addActions(self.menus.edit, actions + self.actions.editMenu)
 
@@ -631,7 +630,8 @@ class MainWindow(QMainWindow, WindowMixin):
 
     ## Callbacks ##
     def showTutorialDialog(self):
-        subprocess.Popen(self.screencastViewer + [self.screencast])
+        # subprocess.Popen(self.screencastViewer + [self.screencast])
+        print('test')
 
     def showInfoDialog(self):
         msg = u'Name:{0} \nApp Version:{1} \n{2} '.format(__appname__, __version__, sys.version_info)
@@ -671,6 +671,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         def exists(filename):
             return os.path.exists(filename)
+
         menu = self.menus.recentFiles
         menu.clear()
         files = [f for f in self.recentFiles if f !=
@@ -697,13 +698,13 @@ class MainWindow(QMainWindow, WindowMixin):
             item = item.parent()
 
         shape = self.itemsToShapes[item]
-        dialog = LabelDialog(label= shape.label, subLabels=shape.subLabels)
+        dialog = LabelDialog(label=shape.label, subLabels=shape.subLabels)
         subLabels, saveData = dialog.popUp()
         # print(saveData)
         if subLabels is not None:
-            text , sublabels = subLabels[0], subLabels[1:]
+            text, sublabels = subLabels[0], subLabels[1:]
             if text is not None:
-                item.setText(0,text)
+                item.setText(0, text)
                 for i in reversed(range(item.childCount())):
                     item.removeChild(item.child(i))
                 for sub in sublabels:
@@ -712,7 +713,7 @@ class MainWindow(QMainWindow, WindowMixin):
                     child.setText(0, sub)
                     child.setCheckState(0, Qt.Checked)
 
-                item.setBackground(0,generateColorByText(text))
+                item.setBackground(0, generateColorByText(text))
                 shape.subLabels = sublabels
                 shape.label = text
                 self.setDirty()
@@ -723,7 +724,10 @@ class MainWindow(QMainWindow, WindowMixin):
 
     # Tzutalin 20160906 : Add file list and dock to move faster
     def fileitemDoubleClicked(self, item=None):
-        currIndex = self.mImgList.index(ustr(item.text()))
+        # print(item)
+        # item
+        widget_item = self.fileListWidget.itemWidget(item)
+        currIndex = self.mImgList.index(ustr(widget_item.getPath()))
         if currIndex < len(self.mImgList):
             filename = self.mImgList[currIndex]
             if filename:
@@ -780,10 +784,10 @@ class MainWindow(QMainWindow, WindowMixin):
     def addLabel(self, shape):
         # print('addLabel')
         shape.paintLabel = self.displayLabelOption.isChecked()
-        item = HashableQTreeWidgetItem(self.labelList) # HashableQListWidgetItem(shape.label)
+        item = HashableQTreeWidgetItem(self.labelList)  # HashableQListWidgetItem(shape.label)
 
-        item.setText(0,shape.label)
-        item.setBackground(0,generateColorByText(shape.label))
+        item.setText(0, shape.label)
+        item.setBackground(0, generateColorByText(shape.label))
         for sub in shape.subLabels:
             child = QTreeWidgetItem(item)
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
@@ -797,7 +801,6 @@ class MainWindow(QMainWindow, WindowMixin):
         # self.labelList.addItem(item)
         for action in self.actions.onShapesPresent:
             action.setEnabled(True)
-
 
     def remLabel(self, shape):
         if shape is None:
@@ -842,19 +845,20 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def saveLabels(self, annotationFilePath):
         annotationFilePath = ustr(annotationFilePath)
+
         def format_shape(s):
             return dict(label=s.label,
-                        subLabels = s.subLabels,
+                        subLabels=s.subLabels,
                         line_color=s.line_color.getRgb(),
                         fill_color=s.fill_color.getRgb(),
                         points=[(p.x(), p.y()) for p in s.points]
                         )
-                       # # add chris
-                       #  difficult = s.difficult)
+            # # add chris
+            #  difficult = s.difficult)
 
         shapes = [format_shape(shape) for shape in self.canvas.shapes]
 
-        if annotationFilePath[-4:].lower() == ".xml" :
+        if annotationFilePath[-4:].lower() == ".xml":
             annotationFilePath = annotationFilePath[:-4]
             annotationFilePath += TXT_EXT
         elif annotationFilePath[-4:].lower() != ".xml" and annotationFilePath[-4:].lower() != ".txt":
@@ -862,23 +866,23 @@ class MainWindow(QMainWindow, WindowMixin):
 
         f = open(annotationFilePath, 'w')
         for data in shapes:
-            f.write('{0},{1},{2},{3},{4},{5},{6},{7},{8}|{9}\n'.format(int(data['points'][0][0]),int(data['points'][0][1]),\
-                                                                       int(data['points'][1][0]),int(data['points'][1][1]),\
-                                                                       int(data['points'][2][0]),int(data['points'][2][1]),\
-                                                                       int(data['points'][3][0]),int(data['points'][3][1]),\
+            f.write('{0},{1},{2},{3},{4},{5},{6},{7},{8}|{9}\n'.format(int(data['points'][0][0]), int(data['points'][0][1]), \
+                                                                       int(data['points'][1][0]), int(data['points'][1][1]), \
+                                                                       int(data['points'][2][0]), int(data['points'][2][1]), \
+                                                                       int(data['points'][3][0]), int(data['points'][3][1]), \
                                                                        data['label'], '|'.join(data['subLabels'])))
             if self.saveFormatCBox.checkState():
                 # if data['label'] == 'MODEL':
-                    # print(data['label'] )
-                    # print([[int(data['points'][0][0]), int(data['points'][0][1])],
-                    #                                 [int(data['points'][1][0]), int(data['points'][1][1])],
-                    #                                 [int(data['points'][2][0]), int(data['points'][2][1])],
-                    #                                 [int(data['points'][3][0]), int(data['points'][3][1])]] )
+                # print(data['label'] )
+                # print([[int(data['points'][0][0]), int(data['points'][0][1])],
+                #                                 [int(data['points'][1][0]), int(data['points'][1][1])],
+                #                                 [int(data['points'][2][0]), int(data['points'][2][1])],
+                #                                 [int(data['points'][3][0]), int(data['points'][3][1])]] )
                 self.dataSublabel[data['label']] = [data['subLabels'],
                                                     [[int(data['points'][0][0]), int(data['points'][0][1])],
-                                                    [int(data['points'][1][0]), int(data['points'][1][1])],
-                                                    [int(data['points'][2][0]), int(data['points'][2][1])],
-                                                    [int(data['points'][3][0]), int(data['points'][3][1])]]]
+                                                     [int(data['points'][1][0]), int(data['points'][1][1])],
+                                                     [int(data['points'][2][0]), int(data['points'][2][1])],
+                                                     [int(data['points'][3][0]), int(data['points'][3][1])]]]
         f.close()
 
     def copySelectedShape(self):
@@ -925,10 +929,11 @@ class MainWindow(QMainWindow, WindowMixin):
 
         plist = [[xi1, yi1], [xi2, yi2], [xi3, yi3], [xi4, yi4]]
         return plist
-    def minEditdistanceLabel(self, label, listword = None):
+
+    def minEditdistanceLabel(self, label, listword=None):
 
         if listword is None:
-            listword = ['JAPAN', 'NISSAN', 'TOYOTA', 'DAIHATSU', 'SUZUKI', 'CORPORATION', 'CO.,LTD.',\
+            listword = ['JAPAN', 'NISSAN', 'TOYOTA', 'DAIHATSU', 'SUZUKI', 'CORPORATION', 'CO.,LTD.', \
                         'TRIM', 'COLOR', 'ENGINE', 'CHASSIS', 'CHASSIS NO.', 'MODEL', 'PLANT', 'PLANTA', 'TRANS', \
                         'TYPE', 'TIPO', 'MODELD', 'MOTOR']
         else:
@@ -940,7 +945,7 @@ class MainWindow(QMainWindow, WindowMixin):
         minIdx = -1
         for i, w in enumerate(listword):
             d = distance(w, label)
-            if d < minedit and d <= len(w)/4:
+            if d < minedit and d <= len(w) / 4:
                 minedit = d
                 minIdx = i
 
@@ -948,6 +953,7 @@ class MainWindow(QMainWindow, WindowMixin):
             return listword[minIdx]
         else:
             return label
+
     #
     # def get_this_reflabel(self):
     #     point = self.canvas.shapes[-1].points
@@ -998,7 +1004,6 @@ class MainWindow(QMainWindow, WindowMixin):
     #             return shape.label
     #     return None
 
-
     # Callback functions:
 
     def onlyPositionRefile(self, points):
@@ -1046,7 +1051,7 @@ class MainWindow(QMainWindow, WindowMixin):
         #     text = self.defaultLabelTextLine.text()
         #     brand, note = '', ''
         subLabels, ret_lb = self.onlyPosition(self.canvas.shapes[-1].points)
-        if ret_lb == '' and subLabels==[]:
+        if ret_lb == '' and subLabels == []:
             subLabels, ret_lb = self.onlyPositionRefile(self.canvas.shapes[-1].points)
 
         # if len(self.labelHist) > 0:
@@ -1163,7 +1168,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def togglePolygons(self, value):
         for item, shape in self.itemsToShapes.items():
-            item.setCheckState(0,Qt.Checked if value else Qt.Unchecked)
+            item.setCheckState(0, Qt.Checked if value else Qt.Unchecked)
 
     def loadFile(self, filePath=None):
         """Load the specified file, or the last opened file if None."""
@@ -1214,7 +1219,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
             # Label xml file and show bound box according to its filename
             # if self.usingPascalVocFormat is True:
-
+            self.loadRefFile(self.filePath)
             if self.defaultSaveDir is not None:
                 basename = os.path.basename(
                     os.path.splitext(self.filePath)[0])
@@ -1223,17 +1228,21 @@ class MainWindow(QMainWindow, WindowMixin):
                 """Annotation file priority:
                 PascalXML > YOLO
                 """
-                if os.path.isfile(txtPath):
+                print(txtPath)
+                if os.path.exists(txtPath):
                     self.loadYOLOTXTByFilename(txtPath)
                 else:
+                    print('beginFromRef')
                     self.beginFromRef(basename)
             else:
                 txtPath = os.path.splitext(filePath)[0] + TXT_EXT
+                print(txtPath)
                 basename = os.path.basename(
                     os.path.splitext(self.filePath)[0])
-                if os.path.isfile(txtPath):
+                if os.path.exists(txtPath):
                     self.loadYOLOTXTByFilename(txtPath)
                 else:
+                    print('beginFromRef')
                     self.beginFromRef(basename)
 
             self.setWindowTitle(__appname__ + ' ' + filePath)
@@ -1248,8 +1257,8 @@ class MainWindow(QMainWindow, WindowMixin):
         return False
 
     def resizeEvent(self, event):
-        if self.canvas and not self.image.isNull()\
-           and self.zoomMode != self.MANUAL_ZOOM:
+        if self.canvas and not self.image.isNull() \
+                and self.zoomMode != self.MANUAL_ZOOM:
             self.adjustScale()
         super(MainWindow, self).resizeEvent(event)
 
@@ -1345,8 +1354,8 @@ class MainWindow(QMainWindow, WindowMixin):
             path = '.'
 
         dirpath = ustr(QFileDialog.getExistingDirectory(self,
-                                                       '%s - Save annotations to the directory' % __appname__, path,  QFileDialog.ShowDirsOnly
-                                                       | QFileDialog.DontResolveSymlinks))
+                                                        '%s - Save annotations to the directory' % __appname__, path, QFileDialog.ShowDirsOnly
+                                                        | QFileDialog.DontResolveSymlinks))
 
         if dirpath is not None and len(dirpath) > 1:
             self.defaultSaveDir = dirpath
@@ -1361,11 +1370,11 @@ class MainWindow(QMainWindow, WindowMixin):
             self.statusBar().show()
             return
 
-        path = os.path.dirname(ustr(self.filePath))\
+        path = os.path.dirname(ustr(self.filePath)) \
             if self.filePath else '.'
         if self.usingPascalVocFormat:
             filters = "Open Annotation XML file (%s)" % ' '.join(['*.xml'])
-            filename = ustr(QFileDialog.getOpenFileName(self,'%s - Choose a xml file' % __appname__, path, filters))
+            filename = ustr(QFileDialog.getOpenFileName(self, '%s - Choose a xml file' % __appname__, path, filters))
             if filename:
                 if isinstance(filename, (tuple, list)):
                     filename = filename[0]
@@ -1385,10 +1394,10 @@ class MainWindow(QMainWindow, WindowMixin):
         else:
             defaultOpenDirPath = os.path.dirname(self.filePath) if self.filePath else '.'
 
-        if silent!=True :
+        if silent != True:
             targetDirPath = ustr(QFileDialog.getExistingDirectory(self,
-                                                         '%s - Open Directory' % __appname__, defaultOpenDirPath,
-                                                         QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks))
+                                                                  '%s - Open Directory' % __appname__, defaultOpenDirPath,
+                                                                  QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks))
         else:
             targetDirPath = ustr(defaultOpenDirPath)
 
@@ -1399,32 +1408,44 @@ class MainWindow(QMainWindow, WindowMixin):
             return False
         list_imgs = os.listdir(self.lastOpenDir)
         list_refs = os.listdir(self.refDir)
-        check = [ '{}.txt'.format(os.path.splitext(fn)[0]) in list_refs  for fn in list_imgs]
+        check = ['{}.txt'.format(os.path.splitext(fn)[0]) in list_refs for fn in list_imgs]
         if all(check):
             return True
         else:
             return False
 
     def importDirImages(self, dirpath):
-        if not self.mayContinue() or not dirpath:
+        # if not self.mayContinue() or not dirpath:
+        #     return
+        if not dirpath:
             return
 
         self.lastOpenDir = dirpath
 
         output_dir = os.path.join(os.getcwd(), 'datasets/detect_label/')
-        output_name = os.path.basename(os.path.abspath(self.lastOpenDir ))
+        output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
         self.refDir = os.path.join(output_dir, output_name)
         if not self.isExistsRefDir():
             self.download()
 
         self.dirname = dirpath
+        self.defaultSaveDir = None
         self.filePath = None
         self.fileListWidget.clear()
         self.mImgList = self.scanAllImages(dirpath)
+        self.dirty = False
         self.openNextImg()
         for imgPath in self.mImgList:
-            item = QListWidgetItem(imgPath)
+            myQCustomQWidget = QCustomQWidget(imgPath)
+            item = QListWidgetItem()
+            item.setSizeHint(myQCustomQWidget.sizeHint())
             self.fileListWidget.addItem(item)
+            self.fileListWidget.setItemWidget(item, myQCustomQWidget)
+
+            # item = QCustomQWidget()
+            # item.setIcon(imgPath)
+            # item.setTextUp(imgPath)
+            # self.fileListWidget.addItem(item)
 
     # load file txt to ref label
     def loadRefFile(self, imgPath):
@@ -1450,12 +1471,11 @@ class MainWindow(QMainWindow, WindowMixin):
                         label = labels
                         subLabel = []
 
-                    shape = {'points': points, 'label':label, 'subLabel':subLabel}
+                    shape = {'points': points, 'label': label, 'subLabel': subLabel}
                     self.shapesRefs.append(shape)
 
         self.shapesRefs.sort(key=lambda x: x['points'][0])
         return
-
 
     def openPrevImg(self, _value=False):
         # Proceding prev image without dialog if having any label
@@ -1512,25 +1532,24 @@ class MainWindow(QMainWindow, WindowMixin):
             self.loadRefFile(filename)
             self.loadFile(filename)
 
-
-
     def upLoadBtn(self, _value=False):
         if self.lastOpenDir is None or self.defaultSaveDir is None:
             mess = 'prerequisite, must open a folder and choose save folder'
             QMessageBox.information(self, "Message", mess)
 
             return
-        elif not os.path.exists(self.lastOpenDir) or  not os.path.exists(self.defaultSaveDir):
+        elif not os.path.exists(self.lastOpenDir) or not os.path.exists(self.defaultSaveDir):
             mess = 'prerequisite, must open a folder and choose save folder'
             QMessageBox.information(self, "Message", mess)
 
             return
-        upLoadWind = uploadDialog(self, name = os.path.basename(self.defaultSaveDir))
+        upLoadWind = uploadDialog(self, name=os.path.basename(self.defaultSaveDir))
         newName = upLoadWind.get_name()
         try:
             if newName is not None:
                 print(newName)
-                wai = waitDialog(title = 'uploading', txtt='wait awhile, until upload {} done\n folder path: {}'.format(newName, self.defaultSaveDir), num=0)
+                wai = waitDialog(title='uploading', txtt='wait awhile, until upload {} done\n folder path: {}'.format(newName, self.defaultSaveDir),
+                                 num=0)
                 dowloadAPI.upload_gt_dir(os.path.abspath(self.lastOpenDir), os.path.abspath(self.defaultSaveDir),
                                          newName=newName)
                 wai.mess = 'upload completed'
@@ -1542,9 +1561,8 @@ class MainWindow(QMainWindow, WindowMixin):
             wai.delay(1000)
             wai.done_close()
 
-
     def download(self, _value=False):
-        print('dir',  self.lastOpenDir)
+        print('dir', self.lastOpenDir)
         if self.lastOpenDir is None:
             mess = 'prerequisite, must open a folder and choose save folder'
             QMessageBox.information(self, "Message", mess)
@@ -1554,10 +1572,9 @@ class MainWindow(QMainWindow, WindowMixin):
             QMessageBox.information(self, "Message", mess)
             return
 
-
-        wai = waitDialog(txtt = 'wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), num=0)
+        wai = waitDialog(txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), num=0)
         output_dir = os.path.join(os.getcwd(), 'datasets/detect_label/')
-        output_name = os.path.basename(os.path.abspath(self.lastOpenDir ))
+        output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
         self.refDir = os.path.join(output_dir, output_name)
         if not os.path.exists(self.refDir):
             os.mkdir(self.refDir)
@@ -1572,8 +1589,9 @@ class MainWindow(QMainWindow, WindowMixin):
         try:
             content, mess = dowloadAPI.request_current_synDir()
             if mess is None:
-                (current_synDir, pretrain_list) = content
-                trainWind = trainDialog(parent=self, listData=current_synDir, listPretrain=pretrain_list, numEpoch=100)
+                (current_synDir, pretrain_list, note_list) = content
+                print(note_list)
+                trainWind = trainDialog(parent=self, listData=current_synDir, listPretrain=pretrain_list, listnote=note_list, numEpoch=100)
                 synDirs_chose, IncrementalDir, pretrain, numEpoch, prefixName = trainWind.get_synDir_chose()
                 print(synDirs_chose, IncrementalDir, pretrain, numEpoch, prefixName)
                 if synDirs_chose is not None:
@@ -1583,7 +1601,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 else:
                     print('synDirs_chose is None')
             else:
-                wai = waitDialog(title='training',txtt=mess, num=0)
+                wai = waitDialog(title='training', txtt=mess, num=0)
                 wai.delay(1000)
                 wai.done_close()
         except:
@@ -1596,7 +1614,7 @@ class MainWindow(QMainWindow, WindowMixin):
         checkpointDf, isTraining = dowloadAPI.request_train_status()
 
         win_status = TrainStatus(checkpointDf=checkpointDf, isTraining=isTraining)
-        isStop = win_status.chose_stop()
+        isStop, notes = win_status.chose_stop()
 
         if isStop:
             print('chose stop training:', isStop)
@@ -1604,9 +1622,17 @@ class MainWindow(QMainWindow, WindowMixin):
         else:
             print('chose continue training:', isStop)
 
+
+        if notes:
+            print('notes:', notes)
+            dowloadAPI.request_save_notes(notes)
+        else:
+            print('notes is not:', notes)
+
+
     def choose_checkpoint(self, _value=False):
         try:
-            checkpointDf =  dowloadAPI.request_all_checkpoints()
+            checkpointDf = dowloadAPI.request_all_checkpoints()
             listcheck = checkpointDf['name']
             chooseWind = choose_checkpoint(parent=self, listcheck=listcheck)
             checkpoint_chose = chooseWind.get_chose()
@@ -1622,7 +1648,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def download_checkpoint(self, _value=False):
         # try:
-        checkpointDf =  dowloadAPI.request_all_checkpoints()
+        checkpointDf = dowloadAPI.request_all_checkpoints()
         listcheck = checkpointDf['name']
         print('listcheck', listcheck)
         chooseWind = download_checkpoint(parent=self, listcheck=listcheck)
@@ -1636,7 +1662,7 @@ class MainWindow(QMainWindow, WindowMixin):
             zip_checkpoint, filename = dowloadAPI.down_checkpoint_chose(checkpoint_chose)
             wai.done_close()
             # save_path = self.saveCheckpointDialog(zip_file_name = 'zip_checkpoint.zip')
-            save_path = self.saveCheckpointDialog(zip_file_name = filename)
+            save_path = self.saveCheckpointDialog(zip_file_name=filename)
             # zip_checkpoint.save(save_path)
             if save_path:
                 with open(save_path, 'wb') as f:
@@ -1650,7 +1676,6 @@ class MainWindow(QMainWindow, WindowMixin):
         #     wai = waitDialog('can not connect server', num=0)
         #     wai.delay(1000)
         #     wai.done_close()
-
 
     def saveCheckpointDialog(self, zip_file_name):
         caption = '%s - Choose path' % __appname__
@@ -1666,7 +1691,6 @@ class MainWindow(QMainWindow, WindowMixin):
             fullFilePath = ustr(dlg.selectedFiles()[0])
             return fullFilePath
         return ''
-
 
     def saveFile(self, _value=False):
         if self.defaultSaveDir is not None and len(ustr(self.defaultSaveDir)):
@@ -1687,13 +1711,12 @@ class MainWindow(QMainWindow, WindowMixin):
         self.defaultSaveDir = os.path.dirname(savedPath)
         self._saveFile(savedPath)
 
-
     def saveFileDialog(self, removeExt=True):
         caption = '%s - Choose File' % __appname__
         filters = 'File (*%s)' % TXT_SUFFIX
         openDialogPath = self.currentPath()
         dlg = QFileDialog(self, caption, openDialogPath, filters)
-        dlg.setDefaultSuffix(filters[1:])
+        dlg.setDefaultSuffix('txt')
         dlg.setAcceptMode(QFileDialog.AcceptSave)
         filenameWithoutExtension = os.path.splitext(self.filePath)[0] + '.txt'
         dlg.selectFile(filenameWithoutExtension)
@@ -1701,7 +1724,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if dlg.exec_():
             fullFilePath = ustr(dlg.selectedFiles()[0])
             if removeExt:
-                return os.path.splitext(fullFilePath)[0] # Return file path without the extension.
+                return os.path.splitext(fullFilePath)[0]  # Return file path without the extension.
             else:
                 return fullFilePath
 
@@ -1797,7 +1820,7 @@ class MainWindow(QMainWindow, WindowMixin):
                         self.labelHist.append(line)
         pwd = os.getcwd()
         brandfile = os.path.join(pwd, 'data', 'brand.txt')
-        print('brandfile',brandfile)
+        print('brandfile', brandfile)
         if os.path.exists(brandfile) is True:
             with codecs.open(brandfile, 'r', 'utf8') as f:
                 for line in f:
@@ -1829,24 +1852,23 @@ class MainWindow(QMainWindow, WindowMixin):
         self.loadLabels(shapes)
         self.canvas.verified = tYoloParseReader.verified
 
-
     def check_overlap(self, points1, points2):
         merge_v = merge_h = False
-        (xi1, yi1), (xi2, yi2) , (xi3, yi3), (xi4, yi4) = points1
+        (xi1, yi1), (xi2, yi2), (xi3, yi3), (xi4, yi4) = points1
 
         (xj1, yj1), (xj2, yj2), (xj3, yj3), (xj4, yj4) = points2
-        xj1, yj1, xj2, yj2, xj3, yj3, xj4, yj4 = int(xj1), int(yj1),int(xj2), int(yj2),int(xj3), int(yj3),int(xj4), int(yj4)
+        xj1, yj1, xj2, yj2, xj3, yj3, xj4, yj4 = int(xj1), int(yj1), int(xj2), int(yj2), int(xj3), int(yj3), int(xj4), int(yj4)
 
         h_max = max(yi4 - yi1, yj4 - yj1)
         h_min = min(yi4 - yi1, yj4 - yj1)
         overlap_h = min(yi4, yj4) - max(yi1, yj1)
-        if overlap_h >= h_min*0.8 and overlap_h >= h_max*0.5:
+        if overlap_h >= h_min * 0.8 and overlap_h >= h_max * 0.5:
             merge_h = True
 
-        v_max = max(xi3- xi1, xj3- xj1)
-        v_min = min(xi3- xi1, xj3- xj1)
+        v_max = max(xi3 - xi1, xj3 - xj1)
+        v_min = min(xi3 - xi1, xj3 - xj1)
         overlap_v = min(xi3, xj3) - max(xi1, xj1)
-        if overlap_v >= v_min*0.8 and overlap_v >= v_max*0.5:
+        if overlap_v >= v_min * 0.8 and overlap_v >= v_max * 0.5:
             merge_v = True
         return merge_v and merge_h
 
@@ -1874,7 +1896,6 @@ class MainWindow(QMainWindow, WindowMixin):
                 ret_subs = []
 
         return ret_subs
-
 
     def hint_shapes_from_shapesRefs(self, shapes):
         s = []
@@ -1918,6 +1939,7 @@ class MainWindow(QMainWindow, WindowMixin):
     def beginFromRef(self, baseName):
         # print('beginFromRef')
         if os.path.isfile(os.path.join(self.refDir,'{}.txt'.format(baseName))):
+            print()
             if self.shapesRefs:
                 self.hint_shapes_from_shapesRefs(self.shapesRefs)
                 self.canvas.verified = False
@@ -1928,6 +1950,7 @@ class MainWindow(QMainWindow, WindowMixin):
             shape.paintLabel = self.displayLabelOption.isChecked()
 
     def toogleDrawSquare(self):
+        print(self.drawSquaresOption.isChecked())
         self.canvas.setDrawingShapeToSquare(self.drawSquaresOption.isChecked())
 
     def load_dataSublabels(self):
@@ -1937,7 +1960,7 @@ class MainWindow(QMainWindow, WindowMixin):
         fn = os.path.join(os.getcwd(), 'data/dataSublabel.json')
         if os.path.isfile(fn):
             with open(fn, 'r') as jsonr:
-               refDict = json.load(jsonr)
+                refDict = json.load(jsonr)
 
         return refDict
 
@@ -1948,6 +1971,7 @@ class MainWindow(QMainWindow, WindowMixin):
         fn = os.path.join(os.path.abspath(os.getcwd()), 'data/dataSublabel.json')
         with open(fn, 'w') as jsonw:
             json.dump(self.dataSublabel, jsonw, ensure_ascii=False, indent=4)
+
 
 def inverted(color):
     return QColor(*[255 - v for v in color.getRgb()])
@@ -1967,6 +1991,7 @@ def get_main_app(argv=[]):
     Do everything but app.exec_() -- so that we can test the application in one thread
     """
     app = QApplication(argv)
+    styles.dark(app)
     app.setApplicationName(__appname__)
     app.setWindowIcon(newIcon("app"))
     # Tzutalin 201705+: Accept extra agruments to change predefined class file
@@ -1976,6 +2001,7 @@ def get_main_app(argv=[]):
                          os.path.dirname(sys.argv[0]),
                          'data', 'predefined_classes.txt'),
                      argv[3] if len(argv) >= 4 else None)
+    # g = windows.ModernWindow(win)
     win.show()
     return app, win
 
@@ -1984,6 +2010,7 @@ def main():
     '''construct main app and run it'''
     app, _win = get_main_app(sys.argv)
     return app.exec_()
+
 
 if __name__ == '__main__':
     sys.exit(main())

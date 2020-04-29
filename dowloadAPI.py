@@ -11,7 +11,7 @@ def zipdir(imgpath,gtpath,  zipout):
     allowExtend = ['.jpg', '.JPG', '.png', '.PNG', '.jpeg', '.JPEG']
 
     for f in os.listdir(gtpath):
-        if os.path.splitext(f)[-1] == 'txt':
+        if os.path.splitext(f)[-1] == '.txt':
             ziph.write(os.path.join(gtpath,f), os.path.join('gts',f))
 
     for f in os.listdir(imgpath):
@@ -79,12 +79,18 @@ def request_stop_training():
     print('request_stop_training done:', r.status_code)
     return
 
-# this want get os.path.listdir('/home/ubuntu/nhinhlt/train/crnn/datasets/syn_data')
-# def request_all_checkpoints():
-#     data = {'request': True}
-    # r = requests.post(api_adress + "/api/all_checkpoints", data=data )
-    # print('request_all_checkpoints done', r.status_code)
-    # return r.json()
+# def request_save_notes(notes):
+#     data = {'notes': notes}
+#     r = requests.post(api_adress + "/api/save_notes", data=data)
+#     print('request_save_notes done:', r.status_code)
+#     return
+
+def request_save_notes(notes):
+    data = {'notes': notes}
+    print(data)
+    r = requests.post(api_adress + '/api/save_notes', data=json.dumps(data), )
+    print('request_save_notes done', r.status_code)
+    return
 
 def request_all_checkpoints():
     data = {'request': True}
@@ -144,10 +150,13 @@ def downloadHint(in_dir, out_dir, progressBar = None):
     print(zipPath)
     # try:
     files = {'file': open(zipPath, 'rb')}
-    res = requests.post(
-        url= api_adress + '/api/get_hint',
-        files=files, timeout=1000000
-    )
+    try:
+        res = requests.post(
+            url= api_adress + '/api/get_hint',
+            files=files, timeout=1000000
+        )
+    except Exception as e:
+        print(e)
     data = res.json()
     # except ConnectionError:
     #     print('can not connect server')

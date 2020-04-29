@@ -618,10 +618,10 @@ class Canvas(QWidget):
         self.setAutoFillBackground(True)
         # self.backgroundpixmap = self.backgroundpixmap.scaled(self.width(), self.height() ) #, Qt.FastTransformation) # Qt.KeepAspectRatio,
 
-        pal = self.palette()
-        pal.setColor(self.backgroundRole(),QColor(211, 238, 255))
+        # pal = self.palette()
+        # pal.setColor(self.backgroundRole(),QColor(211, 238, 255))
         # pal.setBrush(QPalette.Background, QBrush(self.backgroundpixmap))
-        self.setPalette(pal)
+        # self.setPalette(pal)
         p.end()
 
     def transformPos(self, point):
