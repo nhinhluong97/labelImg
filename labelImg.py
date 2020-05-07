@@ -36,6 +36,7 @@ from libs.yolo_io import TXT_EXT
 from libs.ustr import ustr
 from libs.hashableQListWidgetItem import HashableQTreeWidgetItem
 from libs.labelDialog2 import *
+from libs import labelDialog2
 from libs.custom_widget import QCustomQWidget
 import dowloadAPI
 
@@ -1548,7 +1549,7 @@ class MainWindow(QMainWindow, WindowMixin):
         try:
             if newName is not None:
                 print(newName)
-                wai = waitDialog(title='uploading', txtt='wait awhile, until upload {} done\n folder path: {}'.format(newName, self.defaultSaveDir),
+                wai = labelDialog2.waitDialog(title='uploading', txtt='wait awhile, until upload {} done\n folder path: {}'.format(newName, self.defaultSaveDir),
                                  num=0)
                 dowloadAPI.upload_gt_dir(os.path.abspath(self.lastOpenDir), os.path.abspath(self.defaultSaveDir),
                                          newName=newName)
@@ -1557,7 +1558,7 @@ class MainWindow(QMainWindow, WindowMixin):
             else:
                 print('newName is', newName)
         except:
-            wai = waitDialog('can not connect server', num=0)
+            wai = labelDialog2.waitDialog('can not connect server', num=0)
             wai.delay(1000)
             wai.done_close()
 
@@ -1572,7 +1573,7 @@ class MainWindow(QMainWindow, WindowMixin):
             QMessageBox.information(self, "Message", mess)
             return
 
-        wai = waitDialog(txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), num=0)
+        wai = labelDialog2.waitDialog(txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), num=0)
         output_dir = os.path.join(os.getcwd(), 'datasets/detect_label/')
         output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
         self.refDir = os.path.join(output_dir, output_name)
@@ -1586,35 +1587,81 @@ class MainWindow(QMainWindow, WindowMixin):
         wai.done_close()
 
     def train(self, _value=False):
-        try:
-            content, mess = dowloadAPI.request_current_synDir()
-            if mess is None:
-                (current_synDir, pretrain_list, note_list) = content
-                print(note_list)
-                trainWind = trainDialog(parent=self, listData=current_synDir, listPretrain=pretrain_list, listnote=note_list, numEpoch=100)
-                synDirs_chose, IncrementalDir, pretrain, numEpoch, prefixName = trainWind.get_synDir_chose()
-                print(synDirs_chose, IncrementalDir, pretrain, numEpoch, prefixName)
-                if synDirs_chose is not None:
-                    print('chose:', synDirs_chose)
-                    # sent list dirs to start train
-                    verify = dowloadAPI.sent_synDirs_chose(synDirs_chose,IncrementalDir, pretrain, numEpoch, prefixName)
-                else:
-                    print('synDirs_chose is None')
+        # try:
+        content, mess = dowloadAPI.request_current_synDir()
+        if mess is None:
+            (current_synDir, pretrain_list, note_list) = content
+            print(note_list)
+            trainWind = trainDialog(parent=self, listData=current_synDir, listPretrain=pretrain_list, listnote=note_list, numEpoch=100)
+            synDirs_chose, pretrain, numEpoch, prefixName = trainWind.get_synDir_chose()
+            print(synDirs_chose, pretrain, numEpoch, prefixName)
+            if synDirs_chose is not None:
+                print('chose:', synDirs_chose)
+                # sent list dirs to start train
+                verify = dowloadAPI.sent_synDirs_chose(synDirs_chose, pretrain, numEpoch, prefixName)
             else:
-                wai = waitDialog(title='training', txtt=mess, num=0)
-                wai.delay(1000)
-                wai.done_close()
-        except:
-            wai = waitDialog('can not connect server', num=0)
+                print('synDirs_chose is None')
+        else:
+            wai = labelDialog2.waitDialog(title='training', txtt=mess, num=0)
             wai.delay(1000)
             wai.done_close()
+        # except:
+        #     wai = waitDialog('can not connect server', num=0)
+        #     wai.delay(1000)
+        #     wai.done_close()
+
 
     def trainning_status(self, _value=False):
 
-        checkpointDf, isTraining = dowloadAPI.request_train_status()
+        checkpointDf, training_log, status_code = dowloadAPI.request_train_status()
 
-        win_status = TrainStatus(checkpointDf=checkpointDf, isTraining=isTraining)
-        isStop, notes = win_status.chose_stop()
+        if status_code not in [201, 200]:
+            wai = labelDialog2.waitDialog(txtt='error appeared', num=0)
+            wai.delay(1000)
+            wai.done_close()
+            return
+
+        win_status = TrainStatus(checkpointDf=checkpointDf, training_log=training_log)
+        notes = win_status.get_note()
+
+        if notes:
+            print('notes:', notes)
+            dowloadAPI.request_save_notes(notes, dir_path=None)
+        else:
+            print('notes is None:', notes)
+
+    @staticmethod
+    def train_history(cpt_name=None):
+        checkpointDf, status_code = dowloadAPI.request_trainning_history(cpt_name)
+
+        if status_code not in [200]:
+            wai = labelDialog2.waitDialog(txtt='error appeared', num=0)
+            wai.delay(1000)
+            wai.done_close()
+
+        win_status = labelDialog2.trainning_history_dialog(checkpointDf=checkpointDf)
+        notes = win_status.get_note()
+
+        if notes:
+            print('notes:', notes)
+            dir_path = os.path.dirname(os.path.dirname( checkpointDf['fullPath'][0])) if checkpointDf.shape[0]>0 else None
+            dowloadAPI.request_save_notes(notes, dir_path=dir_path)
+        else:
+            print('notes is None:', notes)
+
+    @staticmethod
+    def current_trainning_log():
+        checkpointDf, training_log, status_code = dowloadAPI.request_current_trainning_log()
+
+        if status_code not in [200]:
+            wai = labelDialog2.waitDialog(txtt='error appeared', num=0)
+            wai.delay(1000)
+            wai.done_close()
+            return
+
+        win_status = labelDialog2.trainning_log_dialog(checkpointDf=checkpointDf, training_log=training_log)
+
+        isStop = win_status.chose_stop()
 
         if isStop:
             print('chose stop training:', isStop)
@@ -1623,18 +1670,10 @@ class MainWindow(QMainWindow, WindowMixin):
             print('chose continue training:', isStop)
 
 
-        if notes:
-            print('notes:', notes)
-            dowloadAPI.request_save_notes(notes)
-        else:
-            print('notes is not:', notes)
-
-
     def choose_checkpoint(self, _value=False):
         try:
-            checkpointDf = dowloadAPI.request_all_checkpoints()
-            listcheck = checkpointDf['name']
-            chooseWind = choose_checkpoint(parent=self, listcheck=listcheck)
+            listcheck, status_code = dowloadAPI.request_all_checkpoints()
+            chooseWind = labelDialog2.choose_checkpoint(parent=self, listcheck=listcheck)
             checkpoint_chose = chooseWind.get_chose()
             if checkpoint_chose is not None:
                 print('synDirs_chose:', checkpoint_chose)
@@ -1642,14 +1681,13 @@ class MainWindow(QMainWindow, WindowMixin):
             else:
                 print('synDirs_chose is None')
         except:
-            wai = waitDialog(txtt='can not connect server', num=0)
+            wai = labelDialog2.waitDialog(txtt='can not connect server', num=0)
             wai.delay(1000)
             wai.done_close()
 
     def download_checkpoint(self, _value=False):
         # try:
-        checkpointDf = dowloadAPI.request_all_checkpoints()
-        listcheck = checkpointDf['name']
+        listcheck, status_code = dowloadAPI.request_all_checkpoints()
         print('listcheck', listcheck)
         chooseWind = download_checkpoint(parent=self, listcheck=listcheck)
         checkpoint_chose = chooseWind.get_chose()
@@ -1657,7 +1695,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         if checkpoint_chose is not None:
             print('synDirs_chose:', checkpoint_chose)
-            wai = waitDialog(txtt='wait awhile, until download done', num=0)
+            wai = labelDialog2.waitDialog(txtt='wait awhile, until download done', num=0)
 
             zip_checkpoint, filename = dowloadAPI.down_checkpoint_chose(checkpoint_chose)
             wai.done_close()

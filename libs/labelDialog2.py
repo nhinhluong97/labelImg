@@ -7,7 +7,8 @@ try:
 except ImportError:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
-
+from labelImg import MainWindow
+import pandas as pd
 from libs.utils import newIcon, labelValidator
 
 BB = QDialogButtonBox
@@ -147,13 +148,6 @@ class trainDialog(QDialog):
             self.listDataBox[i] = QCheckBox(v)
             grid.addWidget(self.listDataBox[i], i+1, 1)
 
-        self.IncrementalLabel = QLabel('Incremental folder')
-        grid.addWidget(self.IncrementalLabel, 0, 0)
-        self.listIncremental = QComboBox(self)
-        for i, v in enumerate(listData):
-            self.listIncremental.addItem(v)
-        grid.addWidget(self.listIncremental,1, 0)
-
         self.PretrainLabel = QLabel('Pretrain checkpoint')
         grid.addWidget(self.PretrainLabel, 2, 0)
         self.listPretrainBox = QComboBox(self)
@@ -170,11 +164,11 @@ class trainDialog(QDialog):
         self.numEpochEdit.setValidator(QIntValidator())
         grid.addWidget(self.numEpochEdit, 5, 0)
 
-        self.prefixNameLabel = QLabel('prefix insert to folder checkpoint name')
-        grid.addWidget(self.numEpochLabel, 6, 0)
+        self.prefixNameLabel = QLabel('model tag insert to folder checkpoint name')
+        grid.addWidget(self.prefixNameLabel, 6, 0)
         self.prefixNameEdit = QLineEdit()
         self.prefixNameEdit.setPlaceholderText('run name')
-        self.prefixNameEdit.setText('{}'.format('normal'))
+        self.prefixNameEdit.setText('{}'.format('model_tag'))
         # self.numEpochEdit.setValidator(QIntValidator())
         grid.addWidget(self.prefixNameEdit, 7, 0)
 
@@ -200,8 +194,7 @@ class trainDialog(QDialog):
         self.accept()
 
     def get_synDir_chose(self):
-        return (self.choose, self.listIncremental.currentText(), self.listPretrain[self.listPretrainBox.currentIndex()], int(self.numEpochEdit.text()), str(self.prefixNameEdit.text())) if self.exec_() else (None, None, None, None, None)
-        # return (self.choose, self.listIncremental.currentText(), self.listPretrainBox.currentText(), int(self.numEpochEdit.text()), str(self.prefixNameEdit.text())) if self.exec_() else (None, None, None, None, None)
+        return (self.choose, self.listPretrain[self.listPretrainBox.currentIndex()], int(self.numEpochEdit.text()), str(self.prefixNameEdit.text())) if self.exec_() else (None, None, None, None)
 
 class choose_checkpoint(QDialog):
 
@@ -391,7 +384,7 @@ class uploadDialog(QDialog):
 
 
 class TrainStatus(QDialog):
-    def __init__(self, checkpointDf=None, parent=None, isTraining=True):
+    def __init__(self, checkpointDf=None, parent=None, training_log=None):
         super(TrainStatus, self).__init__(parent)
 
         self.isStop = False
@@ -399,26 +392,32 @@ class TrainStatus(QDialog):
         self.tableWidget = QTableWidget()
         self.setData()
         self.tableWidget.resize(self.tableWidget.sizeHint())
+        self.tableWidget.doubleClicked.connect(self.on_click)
+
+        self.training_log = training_log
+        if self.training_log is not None:
+            self.tableWidget_log = QTableWidget()
+            self.setData_log()
+            self.tableWidget_log.resize(self.tableWidget_log.sizeHint())
+            self.tableWidget_log.doubleClicked.connect(self.on_click_log)
+
 
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
 
         bb.button(BB.Cancel).setIcon(newIcon('cancel'))
         bb.button(BB.Cancel).setText('Stop train')
+        bb.button(BB.Cancel).hide()
 
         bb.button(BB.Ok).setIcon(newIcon('done'))
         bb.button(BB.Ok).setText('Ok')
 
         bb.accepted.connect(self.continueBtn)
-        bb.rejected.connect(self.stopbtn)
-
-        if isTraining:
-            bb.button(BB.Cancel).show()
-        else:
-            bb.button(BB.Cancel).hide()
 
         # Add box layout, add table to box layout and add box layout to widget
         self.layout = QGridLayout()
         self.layout.addWidget(self.tableWidget)
+        if self.training_log is not None:
+            self.layout.addWidget(self.tableWidget_log)
         self.setLayout(self.layout)
         self.layout.addWidget(bb, 1, 0)
 
@@ -435,17 +434,40 @@ class TrainStatus(QDialog):
         self.accept()
         return
 
+    @pyqtSlot()
+    def on_click(self):
+        for currentQTableWidgetItem in self.tableWidget.selectedItems():
+            row = currentQTableWidgetItem.row()
+            cpt_name = self.checkpointDf['name'][row]
+            status = list(self.checkpointDf['status'])[row]
+            print('on_click', row, cpt_name, status)
+            if status == 'finish':
+                MainWindow.train_history(cpt_name=cpt_name)
+            else:
+                print('status error:',status, cpt_name)
+                MainWindow.train_history(cpt_name=cpt_name)
+
+    @pyqtSlot()
+    def on_click_log(self):
+        for currentQTableWidgetItem in self.tableWidget_log.selectedItems():
+            row = currentQTableWidgetItem.row()
+            print('on_click_log', row)
+            MainWindow.current_trainning_log()
 
     def setData(self):
         # Create table
+        status_key = 'status'
+        status_collum = pd.DataFrame({status_key: ['finish']*self.checkpointDf.shape[0]})
+        self.checkpointDf = self.checkpointDf.reset_index(drop=True)
+        status_collum = status_collum.reset_index(drop=True)
+        self.checkpointDf = self.checkpointDf.join(status_collum)
+
         ignoreKeys = 'fullPath'
-        self.tableWidget.setRowCount(self.checkpointDf.shape[0])
+        row_num = self.checkpointDf.shape[0]
+        col_num = self.checkpointDf.shape[1] - 1 if ignoreKeys in list(self.checkpointDf.keys()) else self.checkpointDf.shape[1]
+        self.tableWidget.setRowCount(row_num)
 
-        self.tableWidget.setColumnCount(self.checkpointDf.shape[1] - 1 if ignoreKeys in list(self.checkpointDf.keys()) else self.checkpointDf.shape[1])
-
-        # self.tableWidget.setRowCount(100)
-        # # self.tableWidget.setRowCount(self.checkpointDf.keys)
-        # self.tableWidget.setColumnCount(len(self.checkpointDf.keys))
+        self.tableWidget.setColumnCount(col_num)
 
         horHeaders = []
         colIndex = 0
@@ -460,6 +482,7 @@ class TrainStatus(QDialog):
                 self.tableWidget.setItem(m, colIndex, newitem)
                 if key != 'note':
                     newitem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+
             colIndex +=1
 
         self.tableWidget.setHorizontalHeaderLabels(horHeaders)
@@ -468,14 +491,33 @@ class TrainStatus(QDialog):
         self.tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
+    def setData_log(self):
+        ignoreKeys = 'fullPath'
+        self.training_log['status'] = 'training'
+        self.tableWidget_log.setRowCount(1)
+        self.tableWidget_log.setColumnCount(len(self.training_log))
 
+        horHeaders = []
+        colIndex = 0
+        for n, key in enumerate(self.training_log.keys()):
+            if key == ignoreKeys:
+                continue
+            horHeaders.append(key)
+            newitem = QTableWidgetItem(str(self.training_log[key]))
+            self.tableWidget_log.setItem(0, colIndex, newitem)
+            colIndex +=1
 
-    def chose_stop(self):
-        return( self.isStop, self.get_note()) if self.exec() else (None, None)
+        self.tableWidget_log.setHorizontalHeaderLabels(horHeaders)
+
+        self.tableWidget_log.verticalHeader().setVisible(False)
+        self.tableWidget_log.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableWidget_log.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     def get_note(self):
+        return self.ret_note() if self.exec() else None
+
+    def ret_note(self):
         notes = []
-        # loop through headers and find column number for given column name
         headercount = self.tableWidget.columnCount()
         for row in range(0, self.tableWidget.rowCount(), 1):
             for collum in range(0, headercount, 1):
@@ -483,11 +525,13 @@ class TrainStatus(QDialog):
                 if 'note' == headertext:
                     cell = self.tableWidget.item(row, collum).text()  # get cell at row, col
                     notes.append(cell)
-        return notes
+        if all(notes[:self.checkpointDf.shape[0]] == self.checkpointDf['note']):
+            return None
+        else:
+            return notes
 
     def genData(self):
 
-        import pandas as pd
         df = pd.DataFrame(columns=('name', 'loss', 'time', 'best'))
         df = df.append([{'name': 'None', 'time': 'nadfffffffff', 'loss': 'nfffffffffffffffffffffffffffffffffffffffffffff', 'best': 'None'}])
         df = df.append([{'name': 'None', 'time': 'None', 'loss': 'None', 'best': 'None'}])
@@ -544,5 +588,203 @@ class TrainStatus(QDialog):
         df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
         return df
 
+
+
+class trainning_history_dialog(QDialog):
+    def __init__(self, checkpointDf=None, parent=None):
+        super(trainning_history_dialog, self).__init__(parent)
+
+        self.isStop = False
+        self.checkpointDf = checkpointDf
+        self.tableWidget = QTableWidget()
+        self.setData()
+        self.tableWidget.resize(self.tableWidget.sizeHint())
+
+        self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
+
+        bb.button(BB.Cancel).setIcon(newIcon('cancel'))
+        bb.button(BB.Cancel).setText('Stop train')
+        bb.button(BB.Cancel).hide()
+
+        bb.button(BB.Ok).setIcon(newIcon('done'))
+        bb.button(BB.Ok).setText('Ok')
+
+        bb.accepted.connect(self.continueBtn)
+
+        # Add box layout, add table to box layout and add box layout to widget
+        self.layout = QGridLayout()
+        self.layout.addWidget(self.tableWidget)
+        self.setLayout(self.layout)
+        self.layout.addWidget(bb, 1, 0)
+
+
+    def stopbtn(self):
+        # stop trainning ?????????????????
+        self.isStop = True
+        self.accept()
+        return
+
+    def continueBtn(self):
+        # stop trainning ?????????????????
+        self.isStop = False
+        self.accept()
+        return
+
+
+    def setData(self):
+        # Create table
+        ignoreKeys = 'fullPath'
+        row_num = self.checkpointDf.shape[0]
+        col_num = self.checkpointDf.shape[1] - 1 if ignoreKeys in list(self.checkpointDf.keys()) else self.checkpointDf.shape[1]
+        self.tableWidget.setRowCount(row_num)
+
+        self.tableWidget.setColumnCount(col_num)
+
+        horHeaders = []
+        colIndex = 0
+        for n, key in enumerate(self.checkpointDf.keys()):
+            if key == ignoreKeys:
+                continue
+            horHeaders.append(key)
+            for m, item in enumerate(self.checkpointDf[key]):
+                newitem = QTableWidgetItem(str(item))
+                # newitem.setEdit
+                # item.setFlags(Qt.ItemIsEnabled)
+                self.tableWidget.setItem(m, colIndex, newitem)
+                if key != 'note':
+                    newitem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+
+            colIndex +=1
+
+        self.tableWidget.setHorizontalHeaderLabels(horHeaders)
+
+        self.tableWidget.verticalHeader().setVisible(False)
+        self.tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+    def get_note(self):
+        return self.ret_note() if self.exec() else None
+
+    def ret_note(self):
+        notes = []
+        headercount = self.tableWidget.columnCount()
+        for row in range(0, self.tableWidget.rowCount(), 1):
+            for collum in range(0, headercount, 1):
+                headertext = self.tableWidget.horizontalHeaderItem(collum).text()
+                if 'note' == headertext:
+                    cell = self.tableWidget.item(row, collum).text()  # get cell at row, col
+                    notes.append(cell)
+        if all(notes[:self.checkpointDf.shape[0]] == self.checkpointDf['note']):
+            return None
+        else:
+            return notes
+
+
+class trainning_log_dialog(QDialog):
+    def __init__(self, checkpointDf=None, parent=None, training_log=None):
+        super(trainning_log_dialog, self).__init__(parent)
+
+        self.isStop = False
+
+        self.checkpointDf = checkpointDf
+        if self.checkpointDf.shape[0] > 0:
+            self.tableWidget = QTableWidget()
+            self.setData()
+            self.tableWidget.resize(self.tableWidget.sizeHint())
+
+        self.training_log = training_log
+        if self.training_log is not None:
+            self.tableWidget_log = QTableWidget()
+            self.setData_log()
+            self.tableWidget_log.resize(self.tableWidget_log.sizeHint())
+
+        self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
+
+        bb.button(BB.Cancel).setIcon(newIcon('cancel'))
+        bb.button(BB.Cancel).setText('Stop train')
+
+        bb.button(BB.Ok).setIcon(newIcon('done'))
+        bb.button(BB.Ok).setText('Ok')
+
+        bb.accepted.connect(self.continueBtn)
+        bb.rejected.connect(self.stopbtn)
+
+        bb.button(BB.Cancel).show()
+
+        # Add box layout, add table to box layout and add box layout to widget
+        self.layout = QGridLayout()
+        if self.checkpointDf.shape[0] > 0:
+            self.layout.addWidget(self.tableWidget)
+        if self.training_log is not None:
+            self.layout.addWidget(self.tableWidget_log)
+        self.layout.addWidget(bb)
+        self.setLayout(self.layout)
+
+    def stopbtn(self):
+        # stop trainning ?????????????????
+        self.isStop = True
+        self.accept()
+        return
+
+    def continueBtn(self):
+        # stop trainning ?????????????????
+        self.isStop = False
+        self.accept()
+        return
+
+
+    def setData(self):
+        # Create table
+        ignoreKeys = 'fullPath'
+        self.tableWidget.setRowCount(self.checkpointDf.shape[0])
+
+        self.tableWidget.setColumnCount(self.checkpointDf.shape[1] - 1 if ignoreKeys in list(self.checkpointDf.keys()) else self.checkpointDf.shape[1])
+
+        horHeaders = []
+        colIndex = 0
+        for n, key in enumerate(self.checkpointDf.keys()):
+            if key == ignoreKeys:
+                continue
+            horHeaders.append(key)
+            for m, item in enumerate(self.checkpointDf[key]):
+                newitem = QTableWidgetItem(str(item))
+                # newitem.setEdit
+                # item.setFlags(Qt.ItemIsEnabled)
+                self.tableWidget.setItem(m, colIndex, newitem)
+                if key != 'note':
+                    newitem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            colIndex +=1
+
+        self.tableWidget.setHorizontalHeaderLabels(horHeaders)
+
+        self.tableWidget.verticalHeader().setVisible(False)
+        self.tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+    def setData_log(self):
+        # Create table
+        ignoreKeys = 'fullPath'
+        self.tableWidget_log.setRowCount(1)
+
+        self.tableWidget_log.setColumnCount(len(self.training_log))
+
+        horHeaders = []
+        colIndex = 0
+        for n, key in enumerate(self.training_log.keys()):
+            if key == ignoreKeys:
+                continue
+            horHeaders.append(key)
+            newitem = QTableWidgetItem(str(self.training_log[key]))
+            self.tableWidget_log.setItem(0, colIndex, newitem)
+            colIndex +=1
+
+        self.tableWidget_log.setHorizontalHeaderLabels(horHeaders)
+
+        self.tableWidget_log.verticalHeader().setVisible(False)
+        self.tableWidget_log.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableWidget_log.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+    def chose_stop(self):
+        return self.isStop if self.exec() else None
 
 

@@ -3,108 +3,67 @@ import sys, time
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
+from qtmodern import styles, windows
 # from libs.labelDialog2 import TrainStatus
 # import sys
 # from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QTableWidget, QTableWidgetItem, QVBoxLayout
 # from PyQt5.QtGui import QIcon
 # from PyQt5.QtCore import pyqtSlot
-class TrainStatus(QDialog):
-    def __init__(self, checkpointDf=None, parent=None):
-        super(TrainStatus, self).__init__(parent)
+class App(QWidget):
 
-        self.checkpointDf = self.genData()
-        self.tableWidget = QTableWidget()
-        self.setData()
-        self.tableWidget.resize(self.tableWidget.sizeHint())
+    def __init__(self):
+        super().__init__()
+        self.title = 'PyQt5 table - pythonspot.com'
+        self.left = 0
+        self.top = 0
+        self.width = 300
+        self.height = 200
+        self.initUI()
 
-        self.filename = '/home/aimenext/Downloads/img/86230015_614944025957783_8799739092960018432_o.jpg'
-        self.repaint()
-        # self.imgwidget = QWidget()
-        # self.imgwidget.pixmap = QPixmap()
-        oImage = QImage(self.filename)
-        # sImage = oImage.scaled()  # resize Image to widgets size
-        palette = QPalette()
-        palette.setBrush(QPalette.Window, QBrush(oImage))
-        self.setPalette(palette)
+    def initUI(self):
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+        self.createTable()
 
         # Add box layout, add table to box layout and add box layout to widget
-        self.layout = QGridLayout()
+        self.layout = QVBoxLayout()
         self.layout.addWidget(self.tableWidget)
         self.setLayout(self.layout)
 
-        # self.setMaximumHeight(300)
-        # self.resize(500,200)
+        # Show widget
+        self.show()
 
-
-    def setData(self):
+    def createTable(self):
         # Create table
-        self.tableWidget.setRowCount(self.checkpointDf.shape[0])
-        self.tableWidget.setColumnCount(self.checkpointDf.shape[1])
+        self.tableWidget = QTableWidget()
+        self.tableWidget.setRowCount(4)
+        self.tableWidget.setColumnCount(2)
+        self.tableWidget.setItem(0, 0, QTableWidgetItem("Cell (1,1)"))
+        self.tableWidget.setItem(0, 1, QTableWidgetItem("Cell (1,2)"))
+        self.tableWidget.setItem(1, 0, QTableWidgetItem("Cell (2,1)"))
+        self.tableWidget.setItem(1, 1, QTableWidgetItem("Cell (2,2)"))
+        self.tableWidget.setItem(2, 0, QTableWidgetItem("Cell (3,1)"))
+        self.tableWidget.setItem(2, 1, QTableWidgetItem("Cell (3,2)"))
+        self.tableWidget.setItem(3, 0, QTableWidgetItem("Cell (4,1)"))
+        self.tableWidget.setItem(3, 1, QTableWidgetItem("Cell (4,2)"))
+        self.tableWidget.move(0, 0)
 
-        horHeaders = []
-        for n, key in enumerate(self.checkpointDf.keys()):
-            horHeaders.append(key)
-            for m, item in enumerate(self.checkpointDf[key]):
-                newitem = QTableWidgetItem(str(item))
-                self.tableWidget.setItem(m, n, newitem)
-                newitem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        # table selection change
+        self.tableWidget.doubleClicked.connect(self.on_click)
+        self.tableWidget.setHorizontalHeaderLabels(['a', 'b'])
 
-        self.tableWidget.setHorizontalHeaderLabels(horHeaders)
+    @pyqtSlot()
+    def on_click(self):
+        print("\n")
+        for currentQTableWidgetItem in self.tableWidget.selectedItems():
+            print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
 
-        self.tableWidget.verticalHeader().setVisible(False)
-        self.tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
-        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
-
-    def genData(self):
-
-        import pandas as pd
-        df = pd.DataFrame(columns=('name', 'loss', 'time', 'best'))
-        df = df.append([{'name': 'None', 'time': 'nadfffffffff', 'loss': 'nfffffffffffffffffffffffffffffffffffffffffffff', 'best': 'None'}])
-        df = df.append([{'name': 'None', 'time': 'None', 'loss': 'None', 'best': 'None'}])
-        df = df.append([{'name': 'None', 'time': 'None', 'loss': 'None', 'best': 'None'}])
-        return df
-
-    # def spam(self):
-    #     self.imageData = QImage(self.filename)
-    #     image = QImage.fromData(self.imageData)
-    #     self.image = image
-    #     self.pix
-    #     self.canvas.loadPixmap(QPixmap.fromImage(image))
-    #
-    #
-    #
-    # def paintEvent(self, event):
-    #     if not self.pixmap:
-    #         return super(Canvas, self).paintEvent(event)
-    #
-    #     p = self._painter
-    #     p.begin(self)
-    #     p.setRenderHint(QPainter.Antialiasing)
-    #     p.setRenderHint(QPainter.HighQualityAntialiasing)
-    #     p.setRenderHint(QPainter.SmoothPixmapTransform)
-    #
-    #     p.scale(self.scale, self.scale)
-    #     p.translate(self.offsetToCenter())
-    #
-    #     p.drawPixmap(0, 0, self.pixmap)
-    #
-    #     self.setAutoFillBackground(True)
-    #     if self.verified:
-    #         pal = self.palette()
-    #         # pal.setColor(self.backgroundRole(), QColor(184, 239, 38, 128))
-    #         pal.setColor(self.backgroundRole(),QColor(179, 200, 200))
-    #         self.setPalette(pal)
-    #     else:
-    #         pal = self.palette()
-    #         pal.setColor(self.backgroundRole(),  QColor(211, 238, 255))
-    #         # pal.setColor(self.backgroundRole(), QColor(232, 232, 232, 255))
-    #         self.setPalette(pal)
-    #
-    #     p.end()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = TrainStatus()
+
+    # styles.dark(app)
+    ex = App()
     ex.show()
     sys.exit(app.exec_())

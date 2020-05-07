@@ -64,14 +64,43 @@ def request_train_status():
     data = {'request': True}
     r = requests.post(api_adress + "/api/train_status", data=data)
     if r.status_code == 200 or r.status_code==201:
+        ret = r.json()
+        df = json.loads(ret['df'])
+        training_log = ret['training_log']
+        df = pd.DataFrame.from_dict(df)
+    else:
+        df = pd.DataFrame(columns=('name', 'loss', 'time', 'best', 'note'))
+        training_log = None
+    print('request_train_status done', r.status_code)
+    print('training_log',training_log)
+    return df, training_log, r.status_code
+
+def request_trainning_history(cpt_name):
+    data = {'cpt_name': cpt_name}
+    r = requests.post(api_adress + "/api/trainning_history", data=data)
+    if r.status_code == 200 or r.status_code == 201:
         ret = json.loads(r.json())
         ret = pd.DataFrame.from_dict(ret)
     else:
         ret = pd.DataFrame(columns=('name', 'loss', 'time', 'best', 'note'))
 
-    print(ret)
-    print('request_train_status done', r.status_code==200)
-    return ret, r.status_code==200
+    print('request_trainning_history done:', r.status_code)
+    return ret, r.status_code
+
+def request_current_trainning_log():
+    data = {'request': True}
+    r = requests.post(api_adress + "/api/trainning_log", data=data)
+    if r.status_code == 200:
+        ret = r.json()
+        df = json.loads(ret['df'])
+        training_log = ret['training_log']
+        df = pd.DataFrame.from_dict(df)
+    else:
+        df = pd.DataFrame(columns=('name', 'loss', 'time', 'best', 'note'))
+        training_log = None
+
+    print('request_current_trainning_log done:', r.status_code)
+    return df, training_log, r.status_code
 
 def request_stop_training():
     data = {'request': True}
@@ -79,35 +108,31 @@ def request_stop_training():
     print('request_stop_training done:', r.status_code)
     return
 
-# def request_save_notes(notes):
-#     data = {'notes': notes}
-#     r = requests.post(api_adress + "/api/save_notes", data=data)
-#     print('request_save_notes done:', r.status_code)
-#     return
 
-def request_save_notes(notes):
-    data = {'notes': notes}
+def request_save_notes(notes, dir_path):
+    data = {'notes': notes, 'dir_path': dir_path}
     print(data)
-    r = requests.post(api_adress + '/api/save_notes', data=json.dumps(data), )
+    r = requests.post(api_adress + '/api/save_notes', data=json.dumps(data))
     print('request_save_notes done', r.status_code)
     return
 
 def request_all_checkpoints():
     data = {'request': True}
     r = requests.post(api_adress + "/api/train_status", data=data)
-    if r.status_code == 200 or r.status_code==201:
-        ret = json.loads(r.json())
-        ret = pd.DataFrame.from_dict(ret)
+    if r.status_code == 200 or r.status_code == 201:
+        ret = r.json()
+        df = json.loads(ret['df'])
+        df = pd.DataFrame.from_dict(df)
     else:
-        ret = pd.DataFrame(columns=('name', 'loss', 'time', 'best', 'note'))
+        df = pd.DataFrame(columns=('name', 'loss', 'time', 'best', 'note'))
 
-    print(ret)
-    print('request_train_status done', r.status_code==200)
-    return ret
+    listcheck = df['name']
+    print('request_train_status done', r.status_code)
+    return listcheck, r.status_code
 
 # this want sent list synDirs_chose to sever
-def sent_synDirs_chose(synDirs_chose,IncrementalDir, pretrain, numEpoch, prefixName):
-    data = {'chose': synDirs_chose, 'incremental_dir':str(IncrementalDir), 'pretrain':str(pretrain), 'numEpoch':numEpoch, 'prefixName': str(prefixName)}
+def sent_synDirs_chose(synDirs_chose, pretrain, numEpoch, prefixName):
+    data = {'chose': synDirs_chose, 'pretrain':str(pretrain), 'numEpoch':numEpoch, 'prefixName': str(prefixName)}
     print(data)
     r = requests.post(api_adress + '/api/train', data=json.dumps(data), )
     print('sent_synDirs_chose done', r.status_code)
