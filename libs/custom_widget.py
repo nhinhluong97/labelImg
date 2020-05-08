@@ -39,3 +39,32 @@ class QCustomQWidget(QWidget):
 
     def getPath(self):
         return self.imagePath
+
+
+class QCustomQWidget_2(QWidget):
+    def __init__(self, imagePath, parent=None, text=None):
+        super(QCustomQWidget_2, self).__init__(parent)
+        self.imagePath = imagePath
+        self.text = text
+        self.textQVBoxLayout = QVBoxLayout()
+        self.textUpQLabel = QLabel()
+        self.textQVBoxLayout.addWidget(self.textUpQLabel)
+        self.allQHBoxLayout = QHBoxLayout()
+        self.iconQLabel = QLabel()
+        self.allQHBoxLayout.addWidget(self.iconQLabel)
+        self.allQHBoxLayout.addLayout(self.textQVBoxLayout)
+        self.setLayout(self.allQHBoxLayout)
+        self.textUpQLabel.setStyleSheet('''
+            color: rgb(255, 255, 255);
+        ''')
+        # pxmap = QPixmap(imagePath)
+        self.iconQLabel.setPixmap(QPixmap(imagePath).scaledToWidth(32))
+        # self.iconQLabel.setMaximumWidth(50)
+        self.textUpQLabel.setText(self.text)
+        self.textUpQLabel.setFont(QFont('SansSerif', 13))
+
+    def getText(self):
+        return self.text
+
+    # def mousePressEvent(self, event):
+    #     print("clicked")

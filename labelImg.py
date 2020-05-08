@@ -131,8 +131,11 @@ class MainWindow(QMainWindow, WindowMixin):
         self.loadPredefinedClasses(defaultPrefdefClassFile)
         if not os.path.exists(os.path.join(os.getcwd(), 'datasets')):
             os.mkdir(os.path.join(os.getcwd(), 'datasets'))
-        if not os.path.exists(os.path.join(os.getcwd(), 'datasets/detect_label/')):
-            os.mkdir(os.path.join(os.getcwd(), 'datasets/detect_label/'))
+
+        self.data_refdir = os.path.join(os.getcwd(), 'datasets/detect_label/')
+
+        if not os.path.exists(self.data_refdir):
+            os.mkdir(self.data_refdir)
 
         # Main widgets and related state.
         self.labelDialog = LabelDialog(parent=self, label='here', subLabels=['here2', 'here3'])
@@ -248,6 +251,9 @@ class MainWindow(QMainWindow, WindowMixin):
 
         downloadCheckpoint= action('download checkpoint', self.download_checkpoint,
                       None, 'download', 'choose checkpoint will download')
+
+        importServerData = action('importServerData', self.getServerData,
+                         None, 'open', 'download Server Data')
 
 
         opendir = action(getStr('openDir'), self.openDirDialog,
@@ -376,7 +382,7 @@ class MainWindow(QMainWindow, WindowMixin):
                               fitWindow=fitWindow, fitWidth=fitWidth,
                               zoomActions=zoomActions,
                               fileMenuActions=(
-                                  opendir, save, saveAs, close, resetAll, quit),
+                                  opendir, importServerData, save, saveAs, close, resetAll, quit),
                               beginner=(), advanced=(),
                               editMenu=(edit, copy, delete,
                                         None, color1, self.drawSquaresOption),
@@ -414,7 +420,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.displayLabelOption.triggered.connect(self.togglePaintLabelsOption)
 
         addActions(self.menus.file,
-                   (opendir, changeSavedir, openAnnotation, self.menus.recentFiles, save, saveAs, close, resetAll, quit))
+                   (opendir, importServerData, changeSavedir, openAnnotation, self.menus.recentFiles, save, saveAs, close, resetAll, quit))
         addActions(self.menus.help, (help, showInfo))
         addActions(self.menus.sever, (download, upLoadBtn, train, checkpoint, downloadCheckpoint, trainStatus))
         addActions(self.menus.view, (
@@ -436,11 +442,11 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.tools = self.toolbar('Tools')
         self.actions.beginner = (
-            opendir, changeSavedir, openNextImg, openPrevImg, save, download, upLoadBtn, train, trainStatus, create, None, copy, delete, None,
+            opendir, importServerData, changeSavedir, openNextImg, openPrevImg, save, download, upLoadBtn, train, trainStatus, create, None, copy, delete, None,
             zoomIn, zoom, zoomOut, fitWindow, fitWidth, checkpoint, downloadCheckpoint)
 
         self.actions.advanced = (
-            opendir, changeSavedir, openNextImg, openPrevImg, save, download, upLoadBtn, train, trainStatus, createMode, None,
+            opendir, importServerData, changeSavedir, openNextImg, openPrevImg, save, download, upLoadBtn, train, trainStatus, createMode, None,
             editMode, None,
             hideAll, showAll, checkpoint, downloadCheckpoint)
 
@@ -1415,22 +1421,21 @@ class MainWindow(QMainWindow, WindowMixin):
         else:
             return False
 
-    def importDirImages(self, dirpath):
+    def importDirImages(self, dirpath, DownRef=True):
         # if not self.mayContinue() or not dirpath:
         #     return
         if not dirpath:
             return
 
         self.lastOpenDir = dirpath
+        self.defaultSaveDir = dirpath
 
-        output_dir = os.path.join(os.getcwd(), 'datasets/detect_label/')
         output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
-        self.refDir = os.path.join(output_dir, output_name)
-        if not self.isExistsRefDir():
+        self.refDir = os.path.join(self.data_refdir, output_name)
+        if not self.isExistsRefDir() and DownRef:
             self.download()
 
         self.dirname = dirpath
-        self.defaultSaveDir = None
         self.filePath = None
         self.fileListWidget.clear()
         self.mImgList = self.scanAllImages(dirpath)
@@ -1544,7 +1549,17 @@ class MainWindow(QMainWindow, WindowMixin):
             QMessageBox.information(self, "Message", mess)
 
             return
-        upLoadWind = uploadDialog(self, name=os.path.basename(self.defaultSaveDir))
+
+        content, status_code = dowloadAPI.request_current_synDir()
+        if status_code == 400:
+            mess = 'server error'
+            wai = labelDialog2.waitDialog(title='upload', txtt=mess, num=0)
+            wai.delay(1000)
+            wai.done_close()
+            return
+
+        (exists_folders, _, _) = content
+        upLoadWind = uploadDialog(self, name=os.path.basename(self.defaultSaveDir), exists_folders=exists_folders)
         newName = upLoadWind.get_name()
         try:
             if newName is not None:
@@ -1554,6 +1569,44 @@ class MainWindow(QMainWindow, WindowMixin):
                 dowloadAPI.upload_gt_dir(os.path.abspath(self.lastOpenDir), os.path.abspath(self.defaultSaveDir),
                                          newName=newName)
                 wai.mess = 'upload completed'
+                wai.done_close()
+            else:
+                print('newName is', newName)
+        except:
+            wai = labelDialog2.waitDialog('can not connect server', num=0)
+            wai.delay(1000)
+            wai.done_close()
+
+    def getServerData(self, _value=False):
+
+        content, status_code = dowloadAPI.request_list_data_dir()
+        if status_code == 400:
+            mess = 'server error'
+            wai = labelDialog2.waitDialog(title='download dataset', txtt=mess, num=0)
+            wai.delay(1000)
+            wai.done_close()
+            return
+
+        data_folders = content
+        # upLoadWind = labelDialog2.folderServerDialog( data_folders=['a', 'b', 'c'])
+        upLoadWind = labelDialog2.folderServerDialog( data_folders=data_folders)
+        newName, saveDir = upLoadWind.get_name()
+        try:
+            if newName is not None:
+                print(newName)
+                wai = labelDialog2.waitDialog(title='download dataset', txtt='wait awhile, until download {} done\n save in: {}'.format(newName, saveDir),
+                                 num=0)
+                status_code = dowloadAPI.downloadServerData(newName, saveDir, self.data_refdir)
+                if status_code == 200:
+                    self.importDirImages(dirpath=os.path.join(saveDir, newName), DownRef=True)
+                else:
+                    mess = 'server error'
+                    wai = labelDialog2.waitDialog(title='download dataset', txtt=mess, num=0)
+                    wai.delay(1000)
+                    wai.done_close()
+                    return
+                # self.lastOpenDir , self.defaultSaveDir = os.path.join(saveDir, newName)
+                wai.mess = 'download completed'
                 wai.done_close()
             else:
                 print('newName is', newName)
@@ -1574,12 +1627,11 @@ class MainWindow(QMainWindow, WindowMixin):
             return
 
         wai = labelDialog2.waitDialog(txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), num=0)
-        output_dir = os.path.join(os.getcwd(), 'datasets/detect_label/')
         output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
-        self.refDir = os.path.join(output_dir, output_name)
+        self.refDir = os.path.join(self.data_refdir, output_name)
         if not os.path.exists(self.refDir):
             os.mkdir(self.refDir)
-        status_code = dowloadAPI.downloadHint(os.path.abspath(self.lastOpenDir), self.refDir, wai)
+        status_code = dowloadAPI.downloadHint(os.path.abspath(self.lastOpenDir), self.refDir)
         if status_code == 200:
             wai.mess = 'load hint completed'
         else:
@@ -1588,11 +1640,12 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def train(self, _value=False):
         # try:
-        content, mess = dowloadAPI.request_current_synDir()
+        content, status_code = dowloadAPI.request_current_synDir()
+        mess = None if status_code == 200 else 'server error' if status_code == 400 else 'Training is running'
         if mess is None:
             (current_synDir, pretrain_list, note_list) = content
             print(note_list)
-            trainWind = trainDialog(parent=self, listData=current_synDir, listPretrain=pretrain_list, listnote=note_list, numEpoch=100)
+            trainWind = trainDialog(parent=self, listData=current_synDir, listPretrain=pretrain_list, listnote=note_list, numEpoch=1000)
             synDirs_chose, pretrain, numEpoch, prefixName = trainWind.get_synDir_chose()
             print(synDirs_chose, pretrain, numEpoch, prefixName)
             if synDirs_chose is not None:

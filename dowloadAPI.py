@@ -3,6 +3,7 @@ import glob
 import os
 import json
 import zipfile
+import shutil
 import pandas as pd
 api_adress = 'http://54.249.71.234:5050'
 
@@ -58,7 +59,15 @@ def request_current_synDir():
     r = requests.post(api_adress + "/api/current_synDir", data=data )
     print(r.json())
     print('request_current_synDir done', r.status_code)
-    return r.json(), None if r.status_code == 200 else 'server error' if r.status_code== 400 else 'Training is running'
+    return r.json(), r.status_code
+
+# this want get os.path.listdir('/home/ubuntu/nhinhlt/train/crnn/datasets/syn_data')
+def request_list_data_dir():
+    data = {'request': True}
+    r = requests.post(api_adress + "/api/list_data_dir", data=data )
+    # print(r.json())
+    print('request_list_data_dir done', r.status_code)
+    return r.json(), r.status_code
 
 def request_train_status():
     data = {'request': True}
@@ -163,7 +172,7 @@ def down_checkpoint_chose(checkpoint_chose):
     return r, r.headers['filename']
 
 
-def downloadHint(in_dir, out_dir, progressBar = None):
+def downloadHint(in_dir, out_dir):
     import time
     begin = time.time()
     file_list = os.listdir(in_dir)
@@ -202,6 +211,43 @@ def downloadHint(in_dir, out_dir, progressBar = None):
     print('process times {}: {} '.format(len(file_list), time.time() - begin), res.status_code)
     return res.status_code
 
+def downloadServerData(dataname, saveDir, data_refdir):
+    import time
+    begin = time.time()
+    try:
+        data = {'dataname': dataname}
+        res = requests.post(api_adress + '/api/download_Server_Data', data=data)
+
+        if res.status_code == 200:
+            zip_checkpoint, filename = res, res.headers['filename']
+            save_path = os.path.join('.', 'tmp.zip')
+            if save_path:
+                with open(save_path, 'wb') as f:
+                    for chunk in zip_checkpoint.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+            shutil.unpack_archive(save_path, extract_dir= os.path.splitext(save_path)[0])
+            save_path = os.path.splitext(save_path)[0]
+
+            imgs_path = os.path.join(save_path, 'imgs.zip')
+            shutil.unpack_archive(imgs_path, extract_dir=os.path.splitext(imgs_path)[0])
+            imgs_path = os.path.join(save_path, 'imgs')
+
+            refs_path = os.path.join(save_path, 'refs.zip')
+            shutil.unpack_archive(refs_path, extract_dir=os.path.splitext(refs_path)[0])
+            refs_path = os.path.join(save_path, 'refs')
+
+            shutil.move(imgs_path, os.path.join(saveDir, dataname))
+            shutil.move(refs_path, os.path.join(data_refdir, dataname))
+
+        print('process download: {} '.format(time.time() - begin), res.status_code)
+        return res.status_code
+    except Exception as e:
+        print(e)
+
+
+
+#
 # if __name__ == '__main__':
 #
 #     import time
@@ -214,11 +260,11 @@ def downloadHint(in_dir, out_dir, progressBar = None):
 #     # main(indirr, out_dirr)
 #     import shutil
 #     #
-#     # shutil.make_archive(out_dirr+'/test', 'zip', indirr)
-#     # print(time.time() - bg)
-#     # bg = time.time()
-#     # shutil.unpack_archive(out_dirr+'/test.zip', extract_dir=out_dirr)
+#     shutil.make_archive(out_dirr+'/test', 'zip', indirr)
+#     print(time.time() - bg)
+#     bg = time.time()
+#     shutil.unpack_archive(out_dirr+'/test.zip', extract_dir=out_dirr)
 #
-#     zipdir(indirr[0],indirr[1], os.path.join(out_dirr, 'tttt.zip'))
+#     # zipdir(indirr[0],indirr[1], os.path.join(out_dirr, 'tttt.zip'))
 #
 #     print(time.time() - bg)
