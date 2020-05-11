@@ -5,6 +5,7 @@ import os.path
 import platform
 import sys
 import subprocess
+import editdistance
 from qtmodern import styles, windows
 
 from functools import partial
@@ -65,22 +66,6 @@ class WindowMixin(object):
         return toolbar
 
 
-class ThisPalette(QPalette):
-    def __init__(self):
-        super(ThisPalette, self).__init__()
-        # palette.setColor(QPalette.Window, QColor (179, 200, 200))
-        # palette.setColor(QPalette.Window, QColor (211, 238, 255))
-        # self.setColor(QPalette.Window, QColor(150, 182, 197))
-        # self.setColor(QPalette.Base, QColor(255, 255, 255))
-        # selfsetColor(QPalette.AlternateBase, QColor(53, 53, 53))
-        # selfsetColor(QPalette.ToolTipBase, QtCore.Qt.white)
-        # selfsetColor(QPalette.Text, QtCore.Qt.white)
-        # self.setColor(QPalette.Button, QColor(211, 238, 255))
-        # self.setColor(QPalette.ButtonText, QtCore.Qt.black)
-        # selfsetColor(QPalette.BrightText, QtCore.Qt.red)
-        # self.setColor(QPalette.Highlight, QColor(142, 45, 197).lighter())
-        # self.setColor(QPalette.HighlightedText, QtCore.Qt.black)
-
 
 class MainWindow(QMainWindow, WindowMixin):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = list(range(3))
@@ -93,9 +78,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.settings = Settings()
         self.settings.load()
         settings = self.settings
-
-        palette = ThisPalette()
-        self.setPalette(palette)
 
         # Load string bundle for i18n
         self.stringBundle = StringBundle.getBundle()
@@ -133,12 +115,12 @@ class MainWindow(QMainWindow, WindowMixin):
             os.mkdir(os.path.join(os.getcwd(), 'datasets'))
 
         self.data_refdir = os.path.join(os.getcwd(), 'datasets/detect_label/')
-
         if not os.path.exists(self.data_refdir):
             os.mkdir(self.data_refdir)
 
         # Main widgets and related state.
-        self.labelDialog = LabelDialog(parent=self, label='here', subLabels=['here2', 'here3'])
+        # self.labelDialog = LabelDialog(parent=self, label='here', subLabels=['here2', 'here3'])
+        self.labelDialog = None
 
         self.itemsToShapes = {}
         self.shapesToItems = {}
@@ -157,10 +139,6 @@ class MainWindow(QMainWindow, WindowMixin):
         useDefaultLabelContainer = QWidget()
         # useDefaultLabelContainer.setLayout(useDefaultLabelQHBoxLayout)
 
-        # Create a widget for edit and diffc button
-        # self.diffcButton = QCheckBox(getStr('useDifficult'))
-        # self.diffcButton.setChecked(False)
-        # self.diffcButton.stateChanged.connect(self.btnstate)
         self.editButton = QToolButton()
         self.editButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
@@ -169,7 +147,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # Add some of widgets to listLayout
         listLayout.addWidget(self.editButton)
-        # listLayout.addWidget(self.diffcButton)
         listLayout.addWidget(self.saveFormatCBox)
         listLayout.addWidget(useDefaultLabelContainer)
         labelListContainer = QWidget()
@@ -701,7 +678,6 @@ class MainWindow(QMainWindow, WindowMixin):
             return
 
         if item.childCount() == 0 and item.parent() is not None:
-            # print('parent')
             item = item.parent()
 
         shape = self.itemsToShapes[item]
@@ -716,7 +692,6 @@ class MainWindow(QMainWindow, WindowMixin):
                     item.removeChild(item.child(i))
                 for sub in sublabels:
                     child = QTreeWidgetItem(item)
-                    # child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
                     child.setText(0, sub)
                     child.setCheckState(0, Qt.Checked)
 
@@ -731,8 +706,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
     # Tzutalin 20160906 : Add file list and dock to move faster
     def fileitemDoubleClicked(self, item=None):
-        # print(item)
-        # item
         widget_item = self.fileListWidget.itemWidget(item)
         currIndex = self.mImgList.index(ustr(widget_item.getPath()))
         if currIndex < len(self.mImgList):
@@ -740,32 +713,6 @@ class MainWindow(QMainWindow, WindowMixin):
             if filename:
                 self.loadFile(filename)
 
-    # Add chris
-    # def btnstate(self, item= None):
-    #     """ Function to handle difficult examples
-    #     Update on each object """
-    #     if not self.canvas.editing():
-    #         return
-    #
-    #     item = self.currentItem()
-    #     if not item: # If not selected Item, take the first one
-    #         item = self.labelList.item(self.labelList.count()-1)
-    #
-    #     difficult = self.diffcButton.isChecked()
-    #
-    #     try:
-    #         shape = self.itemsToShapes[item]
-    #     except:
-    #         pass
-    #     # Checked and Update
-    #     try:
-    #         if difficult != shape.difficult:
-    #             shape.difficult = difficult
-    #             self.setDirty()
-    #         else:  # User probably changed item visibility
-    #             self.canvas.setShapeVisible(shape, item.checkState() == Qt.Checked)
-    #     except:
-    #         pass
 
     def scroll(self, item):
         self.labelList.scrollToItem(item, QAbstractItemView.PositionAtTop)
@@ -811,7 +758,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def remLabel(self, shape):
         if shape is None:
-            # print('rm empty label')
             return
         item = self.shapesToItems[shape]
         self.labelList.takeTopLevelItem(self.labelList.indexOfTopLevelItem(item))
@@ -821,9 +767,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def loadLabels(self, shapes):
         s = []
-        # for label, subLabel, points, line_color, fill_color, difficult in shapes:
         for label, subLabel, points, line_color, fill_color in shapes:
-            # self.dataSublabel[label] = [subLabel, points]
             shape = Shape(label=label, subLabels=subLabel)
             for x, y in points:
                 # Ensure the labels are within the bounds of the image. If not, fix them.
@@ -832,7 +776,6 @@ class MainWindow(QMainWindow, WindowMixin):
                     self.setDirty()
 
                 shape.addPoint(QPointF(x, y))
-            # shape.difficult = difficult
             shape.close()
             s.append(shape)
 
@@ -860,8 +803,7 @@ class MainWindow(QMainWindow, WindowMixin):
                         fill_color=s.fill_color.getRgb(),
                         points=[(p.x(), p.y()) for p in s.points]
                         )
-            # # add chris
-            #  difficult = s.difficult)
+
 
         shapes = [format_shape(shape) for shape in self.canvas.shapes]
 
@@ -873,10 +815,10 @@ class MainWindow(QMainWindow, WindowMixin):
 
         f = open(annotationFilePath, 'w')
         for data in shapes:
-            f.write('{0},{1},{2},{3},{4},{5},{6},{7},{8}|{9}\n'.format(int(data['points'][0][0]), int(data['points'][0][1]), \
-                                                                       int(data['points'][1][0]), int(data['points'][1][1]), \
-                                                                       int(data['points'][2][0]), int(data['points'][2][1]), \
-                                                                       int(data['points'][3][0]), int(data['points'][3][1]), \
+            f.write('{0},{1},{2},{3},{4},{5},{6},{7},{8}|{9}\n'.format(int(data['points'][0][0]), int(data['points'][0][1]),
+                                                                       int(data['points'][1][0]), int(data['points'][1][1]),
+                                                                       int(data['points'][2][0]), int(data['points'][2][1]),
+                                                                       int(data['points'][3][0]), int(data['points'][3][1]),
                                                                        data['label'], '|'.join(data['subLabels'])))
             if self.saveFormatCBox.checkState():
                 # if data['label'] == 'MODEL':
@@ -898,7 +840,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.shapeSelectionChanged(True)
 
     def labelSelectionChanged(self):
-        # print('labelSelectionChanged')
         item = self.currentItem()
 
         if item and self.canvas.editing():
@@ -908,19 +849,15 @@ class MainWindow(QMainWindow, WindowMixin):
 
             self._noSelectionSlot = True
             self.canvas.selectShape(self.itemsToShapes[item])
-            # shape = self.itemsToShapes[item]
-            # # Add Chris
-            # self.diffcButton.setChecked(shape.difficult)
 
     def labelItemChanged(self, item):
 
         try:
-            # print('labelItemChanged')
             shape = self.itemsToShapes[item]
         except:
             return
         label = item.text(0)
-        # print(label)
+
         if label != shape.label:
             shape.label = item.text(0)
             shape.line_color = generateColorByText(shape.label)
@@ -946,12 +883,11 @@ class MainWindow(QMainWindow, WindowMixin):
         else:
             listword = list(listword)
 
-        from editdistance import distance
 
         minedit = 100
         minIdx = -1
         for i, w in enumerate(listword):
-            d = distance(w, label)
+            d = editdistance.distance(w, label)
             if d < minedit and d <= len(w) / 4:
                 minedit = d
                 minIdx = i
@@ -960,58 +896,6 @@ class MainWindow(QMainWindow, WindowMixin):
             return listword[minIdx]
         else:
             return label
-
-    #
-    # def get_this_reflabel(self):
-    #     point = self.canvas.shapes[-1].points
-    #     points = self.convert_points_list(point)
-    #     x_begin = int(points[0][0])
-    #     label = ''
-    #     preNote = ''
-    #     for shape in self.shapesRefs:
-    #         if self.brandHint is None:
-    #             self.brandHint = shape['brand']
-    #         pointsRef = shape['points']
-    #         if self.check_overlap(points, pointsRef, x_begin=x_begin):
-    #             label += shape['label']
-    #             x_begin = pointsRef[0][0]
-    #             if preNote is None:
-    #                 print('preNote is None')
-    #                 preNote = shape['note']
-    #             elif preNote == 'None':
-    #                 print('preNote == None')
-    #                 preNote = shape['note']
-    #             elif preNote == '':
-    #                 print('preNote == ')
-    #                 preNote = shape['note']
-    #
-    #     if len(self.shapesRefs) < 1:
-    #         self.brandHint = 'daihatsu'
-    #     if label != '':
-    #         return self.minEditdistanceLabel(label), preNote
-    #     else:
-    #         return self.prevLabelText, preNote
-
-    # def leftKey(self):
-    #     KEYS = ['CHASSIS', 'FRAME', 'MODEL', 'TYPE', 'COLOR', 'TRIM', 'ENGINE', 'TRANS']
-    #     point = self.canvas.shapes[-1].points
-    #     points = self.convert_points_list(point)
-    #
-    #     for shape in self.canvas.shapes[:-1]:
-    #         point = shape.points
-    #         points2 = self.convert_points_list(point)
-    #
-    #         inKey = False
-    #         for k in KEYS:
-    #             if shape.label in k or k in shape.label:
-    #                 inKey = True
-    #                 break
-    #         if self.check_overlap(points, points2, end_x=points[0][0], only_line=True) and inKey:
-    #             print('label', shape.label)
-    #             return shape.label
-    #     return None
-
-    # Callback functions:
 
     def onlyPositionRefile(self, points):
         ret_subs = []
@@ -1033,35 +917,10 @@ class MainWindow(QMainWindow, WindowMixin):
 
         position MUST be in global coordinates.
         """
-        # ref_label, preNote = self.get_this_reflabel()
-        # if preNote == '' and secondPreNote is not None:
-        #     preNote = secondPreNote
-        #
-        # if not self.useDefaultLabelCheckbox.isChecked() or not self.defaultLabelTextLine.text():
-        #     if len(self.labelHist) > 0:
-        #         self.labelDialog = LabelDialog(
-        #             parent=self, listItem=self.labelHist, listItem2=self.brandlist, listItem3=self.notelist)
-        #
-        #     # Sync single class mode from PR#106
-        #     if self.singleClassMode.isChecked() and self.lastLabel:
-        #         text = self.lastLabel
-        #         brand, note = '', ''
-        #     else:
-        #         if ref_label in self.refDict:
-        #             self.labelDialog.addtextToList(texts=self.refDict[ref_label])
-        #         if secondPreNote is not None:
-        #             self.labelDialog.addtextToList(textsNote=[secondPreNote])
-        #
-        #         text, brand, note = self.labelDialog.popUp(text=ref_label, brand= self.brandHint, note=preNote)
-        #         self.lastLabel = text
-        # else:
-        #     text = self.defaultLabelTextLine.text()
-        #     brand, note = '', ''
         subLabels, ret_lb = self.onlyPosition(self.canvas.shapes[-1].points)
         if ret_lb == '' and subLabels == []:
             subLabels, ret_lb = self.onlyPositionRefile(self.canvas.shapes[-1].points)
 
-        # if len(self.labelHist) > 0:
         self.labelDialog = LabelDialog(
             parent=self, label=ret_lb, subLabels=subLabels)
 
@@ -1230,7 +1089,7 @@ class MainWindow(QMainWindow, WindowMixin):
             if self.defaultSaveDir is not None:
                 basename = os.path.basename(
                     os.path.splitext(self.filePath)[0])
-                # xmlPath = os.path.join(self.defaultSaveDir, basename + XML_EXT)
+
                 txtPath = os.path.join(self.defaultSaveDir, basename + TXT_EXT)
                 """Annotation file priority:
                 PascalXML > YOLO
@@ -1393,7 +1252,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         lastDir = ustr(self.settings.get(SETTING_LAST_OPEN_DIR, None))
 
-        defaultOpenDirPath = dirpath if dirpath else '.'
         if self.lastOpenDir and os.path.exists(self.lastOpenDir):
             defaultOpenDirPath = self.lastOpenDir
         elif lastDir and os.path.exists(lastDir):
@@ -1413,17 +1271,17 @@ class MainWindow(QMainWindow, WindowMixin):
     def isExistsRefDir(self):
         if not os.path.exists(self.refDir):
             return False
+        extensions = ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'csv']
         list_imgs = os.listdir(self.lastOpenDir)
         list_refs = os.listdir(self.refDir)
-        check = ['{}.txt'.format(os.path.splitext(fn)[0]) in list_refs for fn in list_imgs]
+        check = ['{}.txt'.format(os.path.splitext(fn)[0]) in list_refs for fn in list_imgs if fn.lower().endswith(tuple(extensions))]
         if all(check):
             return True
         else:
             return False
 
     def importDirImages(self, dirpath, DownRef=True):
-        # if not self.mayContinue() or not dirpath:
-        #     return
+
         if not dirpath:
             return
 
@@ -1432,7 +1290,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
         self.refDir = os.path.join(self.data_refdir, output_name)
-        if not self.isExistsRefDir() and DownRef:
+        if DownRef and not self.isExistsRefDir() :
             self.download()
 
         self.dirname = dirpath
@@ -1448,16 +1306,11 @@ class MainWindow(QMainWindow, WindowMixin):
             self.fileListWidget.addItem(item)
             self.fileListWidget.setItemWidget(item, myQCustomQWidget)
 
-            # item = QCustomQWidget()
-            # item.setIcon(imgPath)
-            # item.setTextUp(imgPath)
-            # self.fileListWidget.addItem(item)
 
     # load file txt to ref label
     def loadRefFile(self, imgPath):
         self.shapesRefs = []
         baseName = os.path.splitext(os.path.basename(imgPath))[0] + '.txt'
-        print('baseName', baseName)
 
         refPath = os.path.join(self.refDir, baseName)
         if os.path.exists(refPath):
@@ -1560,27 +1413,30 @@ class MainWindow(QMainWindow, WindowMixin):
 
         (exists_folders, _, _) = content
         upLoadWind = uploadDialog(self, name=os.path.basename(self.defaultSaveDir), exists_folders=exists_folders)
-        newName = upLoadWind.get_name()
-        try:
-            if newName is not None:
-                print(newName)
-                wai = labelDialog2.waitDialog(title='uploading', txtt='wait awhile, until upload {} done\n folder path: {}'.format(newName, self.defaultSaveDir),
-                                 num=0)
-                dowloadAPI.upload_gt_dir(os.path.abspath(self.lastOpenDir), os.path.abspath(self.defaultSaveDir),
-                                         newName=newName)
-                wai.mess = 'upload completed'
+        uploadName = upLoadWind.get_name()
+        if uploadName is not None:
+            print('uploadName: ',uploadName)
+            wai = labelDialog2.waitDialog(title='uploading', txtt='wait awhile, until upload {} done\n From path: {}'.format(uploadName, self.defaultSaveDir),
+                             num=0)
+            status_code = dowloadAPI.upload_gt_dir(os.path.abspath(self.lastOpenDir), os.path.abspath(self.defaultSaveDir),
+                                     newName=uploadName)
+            if status_code != 200:
+                mess = 'server error'
+                wai = labelDialog2.waitDialog(title='upload', txtt=mess, num=0)
+                wai.delay(1000)
                 wai.done_close()
-            else:
-                print('newName is', newName)
-        except:
-            wai = labelDialog2.waitDialog('can not connect server', num=0)
-            wai.delay(1000)
+                return
+
+            wai.mess = 'upload completed'
             wai.done_close()
+        else:
+            print('uploadName is', uploadName)
+
 
     def getServerData(self, _value=False):
 
         content, status_code = dowloadAPI.request_list_data_dir()
-        if status_code == 400:
+        if status_code != 200:
             mess = 'server error'
             wai = labelDialog2.waitDialog(title='download dataset', txtt=mess, num=0)
             wai.delay(1000)
@@ -1588,35 +1444,30 @@ class MainWindow(QMainWindow, WindowMixin):
             return
 
         data_folders = content
-        # upLoadWind = labelDialog2.folderServerDialog( data_folders=['a', 'b', 'c'])
         upLoadWind = labelDialog2.folderServerDialog( data_folders=data_folders)
-        newName, saveDir = upLoadWind.get_name()
-        try:
-            if newName is not None:
-                print(newName)
-                wai = labelDialog2.waitDialog(title='download dataset', txtt='wait awhile, until download {} done\n save in: {}'.format(newName, saveDir),
-                                 num=0)
-                status_code = dowloadAPI.downloadServerData(newName, saveDir, self.data_refdir)
-                if status_code == 200:
-                    self.importDirImages(dirpath=os.path.join(saveDir, newName), DownRef=True)
-                else:
-                    mess = 'server error'
-                    wai = labelDialog2.waitDialog(title='download dataset', txtt=mess, num=0)
-                    wai.delay(1000)
-                    wai.done_close()
-                    return
-                # self.lastOpenDir , self.defaultSaveDir = os.path.join(saveDir, newName)
-                wai.mess = 'download completed'
-                wai.done_close()
+        name, saveDir = upLoadWind.get_name()
+        if name is not None:
+            print('name:', name)
+            wai = labelDialog2.waitDialog(title='download dataset', txtt='wait awhile, until download {} done\n save in: {}'.format(name, saveDir),
+                             num=0)
+            status_code = dowloadAPI.downloadServerData(name, saveDir, self.data_refdir)
+            if status_code == 200:
+                self.importDirImages(dirpath=os.path.join(saveDir, name), DownRef=False)
             else:
-                print('newName is', newName)
-        except:
-            wai = labelDialog2.waitDialog('can not connect server', num=0)
-            wai.delay(1000)
+                mess = 'server error'
+                wai = labelDialog2.waitDialog(title='download dataset', txtt=mess, num=0)
+                wai.delay(1000)
+                wai.done_close()
+                return
+            # self.lastOpenDir , self.defaultSaveDir = os.path.join(saveDir, newName)
+            wai.mess = 'download completed'
             wai.done_close()
+        else:
+            print('newName is', name)
+            print('saveDir', saveDir)
 
     def download(self, _value=False):
-        print('dir', self.lastOpenDir)
+        print('download', self.lastOpenDir)
         if self.lastOpenDir is None:
             mess = 'prerequisite, must open a folder and choose save folder'
             QMessageBox.information(self, "Message", mess)
@@ -1636,32 +1487,34 @@ class MainWindow(QMainWindow, WindowMixin):
             wai.mess = 'load hint completed'
         else:
             wai.mess = 'An error occurred'
+            wai.delay(1000)
         wai.done_close()
 
     def train(self, _value=False):
-        # try:
         content, status_code = dowloadAPI.request_current_synDir()
         mess = None if status_code == 200 else 'server error' if status_code == 400 else 'Training is running'
         if mess is None:
             (current_synDir, pretrain_list, note_list) = content
-            print(note_list)
             trainWind = trainDialog(parent=self, listData=current_synDir, listPretrain=pretrain_list, listnote=note_list, numEpoch=1000)
             synDirs_chose, pretrain, numEpoch, prefixName = trainWind.get_synDir_chose()
-            print(synDirs_chose, pretrain, numEpoch, prefixName)
+            # print(synDirs_chose, pretrain, numEpoch, prefixName)
             if synDirs_chose is not None:
                 print('chose:', synDirs_chose)
-                # sent list dirs to start train
-                verify = dowloadAPI.sent_synDirs_chose(synDirs_chose, pretrain, numEpoch, prefixName)
+                status_code = dowloadAPI.sent_synDirs_chose(synDirs_chose, pretrain, numEpoch, prefixName)
+                if status_code == 200:
+                    pass
+                else:
+                    mess = 'server error'
+                    wai = labelDialog2.waitDialog(title='training', txtt=mess, num=0)
+                    wai.delay(1000)
+                    wai.done_close()
+                    return
             else:
                 print('synDirs_chose is None')
         else:
             wai = labelDialog2.waitDialog(title='training', txtt=mess, num=0)
             wai.delay(1000)
             wai.done_close()
-        # except:
-        #     wai = waitDialog('can not connect server', num=0)
-        #     wai.delay(1000)
-        #     wai.done_close()
 
 
     def trainning_status(self, _value=False):
@@ -1669,7 +1522,7 @@ class MainWindow(QMainWindow, WindowMixin):
         checkpointDf, training_log, status_code = dowloadAPI.request_train_status()
 
         if status_code not in [201, 200]:
-            wai = labelDialog2.waitDialog(txtt='error appeared', num=0)
+            wai = labelDialog2.waitDialog(title = 'trainning_status', txtt='server error', num=0)
             wai.delay(1000)
             wai.done_close()
             return
@@ -1679,7 +1532,15 @@ class MainWindow(QMainWindow, WindowMixin):
 
         if notes:
             print('notes:', notes)
-            dowloadAPI.request_save_notes(notes, dir_path=None)
+            status_code = dowloadAPI.request_save_notes(notes, dir_path=None)
+            if status_code == 200:
+                pass
+            else:
+                mess = 'server error'
+                wai = labelDialog2.waitDialog(title='save notes', txtt=mess, num=0)
+                wai.delay(1000)
+                wai.done_close()
+                return
         else:
             print('notes is None:', notes)
 
@@ -1688,7 +1549,7 @@ class MainWindow(QMainWindow, WindowMixin):
         checkpointDf, status_code = dowloadAPI.request_trainning_history(cpt_name)
 
         if status_code not in [200]:
-            wai = labelDialog2.waitDialog(txtt='error appeared', num=0)
+            wai = labelDialog2.waitDialog(title='train_history', txtt='server error', num=0)
             wai.delay(1000)
             wai.done_close()
 
@@ -1698,7 +1559,15 @@ class MainWindow(QMainWindow, WindowMixin):
         if notes:
             print('notes:', notes)
             dir_path = os.path.dirname(os.path.dirname( checkpointDf['fullPath'][0])) if checkpointDf.shape[0]>0 else None
-            dowloadAPI.request_save_notes(notes, dir_path=dir_path)
+            status_code = dowloadAPI.request_save_notes(notes, dir_path=dir_path)
+            if status_code == 200:
+                pass
+            else:
+                mess = 'server error'
+                wai = labelDialog2.waitDialog(title='save notes', txtt=mess, num=0)
+                wai.delay(1000)
+                wai.done_close()
+                return
         else:
             print('notes is None:', notes)
 
@@ -1707,7 +1576,7 @@ class MainWindow(QMainWindow, WindowMixin):
         checkpointDf, training_log, status_code = dowloadAPI.request_current_trainning_log()
 
         if status_code not in [200]:
-            wai = labelDialog2.waitDialog(txtt='error appeared', num=0)
+            wai = labelDialog2.waitDialog(title='trainning_log', txtt='error appeared', num=0)
             wai.delay(1000)
             wai.done_close()
             return
@@ -1718,55 +1587,77 @@ class MainWindow(QMainWindow, WindowMixin):
 
         if isStop:
             print('chose stop training:', isStop)
-            dowloadAPI.request_stop_training()
+            status_code = dowloadAPI.request_stop_training()
+            if status_code == 200:
+                pass
+            else:
+                mess = 'server error'
+                wai = labelDialog2.waitDialog(title='stop training', txtt=mess, num=0)
+                wai.delay(1000)
+                wai.done_close()
+                return
         else:
             print('chose continue training:', isStop)
 
 
     def choose_checkpoint(self, _value=False):
-        try:
-            listcheck, status_code = dowloadAPI.request_all_checkpoints()
-            chooseWind = labelDialog2.choose_checkpoint(parent=self, listcheck=listcheck)
-            checkpoint_chose = chooseWind.get_chose()
-            if checkpoint_chose is not None:
-                print('synDirs_chose:', checkpoint_chose)
-                verify = dowloadAPI.sent_checkpoint_chose(checkpoint_chose)
-            else:
-                print('synDirs_chose is None')
-        except:
-            wai = labelDialog2.waitDialog(txtt='can not connect server', num=0)
+        listcheck, status_code = dowloadAPI.request_all_checkpoints()
+        if status_code != 200:
+            mess = 'server error'
+            wai = labelDialog2.waitDialog(title='switch checkpoint', txtt=mess, num=0)
             wai.delay(1000)
             wai.done_close()
+            return
+        chooseWind = labelDialog2.choose_checkpoint(parent=self, listcheck=listcheck)
+        checkpoint_chose = chooseWind.get_chose()
+        if checkpoint_chose is not None:
+            print('checkpoint_chose:', checkpoint_chose)
+            status_code = dowloadAPI.sent_checkpoint_chose(checkpoint_chose)
+            if status_code == 200:
+                pass
+            else:
+                mess = 'server error'
+                wai = labelDialog2.waitDialog(title='switch checkpoint', txtt=mess, num=0)
+                wai.delay(1000)
+                wai.done_close()
+                return
+        else:
+            print('checkpoint_chose is None')
 
     def download_checkpoint(self, _value=False):
-        # try:
         listcheck, status_code = dowloadAPI.request_all_checkpoints()
-        print('listcheck', listcheck)
+        if status_code != 200:
+            mess = 'server error'
+            wai = labelDialog2.waitDialog(title='download_checkpoint', txtt=mess, num=0)
+            wai.delay(1000)
+            wai.done_close()
+            return
+
         chooseWind = download_checkpoint(parent=self, listcheck=listcheck)
         checkpoint_chose = chooseWind.get_chose()
-        print('synDirs_chose:', checkpoint_chose)
 
         if checkpoint_chose is not None:
             print('synDirs_chose:', checkpoint_chose)
             wai = labelDialog2.waitDialog(txtt='wait awhile, until download done', num=0)
 
             zip_checkpoint, filename = dowloadAPI.down_checkpoint_chose(checkpoint_chose)
+
+            # if status_code != 200:
+            #     mess = 'server error'
+            #     wai = labelDialog2.waitDialog(title='download_checkpoint', txtt=mess, num=0)
+            #     wai.delay(1000)
+            #     wai.done_close()
+            #     return
+
             wai.done_close()
-            # save_path = self.saveCheckpointDialog(zip_file_name = 'zip_checkpoint.zip')
             save_path = self.saveCheckpointDialog(zip_file_name=filename)
-            # zip_checkpoint.save(save_path)
             if save_path:
                 with open(save_path, 'wb') as f:
                     for chunk in zip_checkpoint.iter_content(chunk_size=1024):
                         if chunk:
                             f.write(chunk)
-            # shutil.unpack_archive(out_dirr + '/test.zip', extract_dir=save_path)
         else:
             print('synDirs_chose is None')
-        # except:
-        #     wai = waitDialog('can not connect server', num=0)
-        #     wai.delay(1000)
-        #     wai.done_close()
 
     def saveCheckpointDialog(self, zip_file_name):
         caption = '%s - Choose path' % __appname__
@@ -1775,8 +1666,6 @@ class MainWindow(QMainWindow, WindowMixin):
         dlg = QFileDialog(self, caption, openDialogPath, filters)
         dlg.setDefaultSuffix(filters[1:])
         dlg.setAcceptMode(QFileDialog.AcceptSave)
-        # filenameWithoutExtension = os.path.splitext(self.filePath)[0]
-        # dlg.selectFile(filenameWithoutExtension)
         dlg.setOption(QFileDialog.DontUseNativeDialog, False)
         if dlg.exec_():
             fullFilePath = ustr(dlg.selectedFiles()[0])
@@ -1992,7 +1881,6 @@ class MainWindow(QMainWindow, WindowMixin):
         s = []
         for sshape in shapes:
             label = self.minEditdistanceLabel(sshape['label'])
-            # line_color, fill_color, difficult = False, False, False
             line_color, fill_color = False, False
             points = []
             for x, y in sshape['points']:
@@ -2006,7 +1894,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
             shape = Shape(label=label, subLabels=subLabel)
             shape.points = points
-            # shape.difficult = difficult
             shape.close()
 
             s.append(shape)

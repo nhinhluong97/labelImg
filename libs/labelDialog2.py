@@ -10,9 +10,9 @@ except ImportError:
 from labelImg import MainWindow
 import pandas as pd
 from libs.utils import newIcon, labelValidator
-from libs.custom_widget import QCustomQWidget_2
+from libs.custom_widget import QCustomQWidget_2, QCustomQWidget_3
 from libs.ustr import ustr
-
+import os
 BB = QDialogButtonBox
 
 class LabelDialog(QDialog):
@@ -355,9 +355,8 @@ class uploadDialog(QDialog):
         self.setWindowTitle(title)
         grid = QGridLayout()
 
-        self.exists_folders_label = QLabel('exists folders in server')
+        self.exists_folders_label = QLabel('you can upload to exists folders in server')
         grid.addWidget(self.exists_folders_label)
-
 
         self.exists_folders = exists_folders
         self.fileListWidget = QListWidget()
@@ -408,7 +407,7 @@ class uploadDialog(QDialog):
 
 class folderServerDialog(QDialog):
 
-    def __init__(self, parent=None, data_folders = []):
+    def __init__(self, parent=None, data_folders = ['aa', 'ccc', 'dd', 'ee']*10):
         super(folderServerDialog, self).__init__(parent)
         title = 'get data from server'
         self.setWindowTitle(title)
@@ -417,27 +416,35 @@ class folderServerDialog(QDialog):
         self.exists_folders_label = QLabel('exists data in server')
         grid.addWidget(self.exists_folders_label)
 
-        self.data_folders = data_folders
-        self.fileListWidget = QListWidget()
-        self.fileListWidget.itemDoubleClicked.connect(self.fileitemDoubleClicked)
-        self.fileListWidget.itemClicked.connect(self.fileitemDoubleClicked)
-        folder_icon_path = 'resources/icons/open.png'
-        for fname in self.data_folders:
-            myQCustomQWidget = QCustomQWidget_2(folder_icon_path, text=fname)
-            item = QListWidgetItem()
-            item.setSizeHint(myQCustomQWidget.sizeHint())
-            self.fileListWidget.addItem(item)
-            self.fileListWidget.setItemWidget(item, myQCustomQWidget)
 
-        grid.addWidget(self.fileListWidget)
-        #
+        self.data_folders = data_folders
+        # self.fileListWidget = QGridLayout()
+        self.scrollArea = QScrollArea(self)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.fileListWidget = QGridLayout(self.scrollAreaWidgetContents)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        grid.addWidget(self.scrollArea)
+
         self.foldername = None
-        self.nameLabel = QLabel('your choose: {}'.format(self.foldername))
-        grid.addWidget(self.nameLabel)
+        self.Label1 = QLabel('your choose:')
+        self.nameLabel = QLabel('{}'.format(self.foldername))
+
+        folder_icon_path = 'resources/icons/open.png'
+        for i, fname in enumerate(self.data_folders):
+            myQCustomQWidget = QCustomQWidget_3(folder_icon_path, text=fname, nameLabel=self.nameLabel)
+            self.fileListWidget.addWidget(myQCustomQWidget, i//3, i%3)
+
+        # grid.addItem(self.fileListWidget)
+
+        nameLabelLayout = QHBoxLayout()
+        nameLabelLayout.addWidget(self.Label1)
+        nameLabelLayout.addWidget(self.nameLabel)
+        grid.addChildLayout(nameLabelLayout)
 
         self.saveDirLayout = QHBoxLayout()
 
-        self.saveDir = '.'
+        self.saveDir =  os.getcwd()
         self.saveDirBtn = QPushButton('Save dir')
         self.saveDirBtn.clicked.connect(self.saveFileDialog)
         self.saveDirLayout.addWidget(self.saveDirBtn)
@@ -452,11 +459,12 @@ class folderServerDialog(QDialog):
         bb.rejected.connect(self.reject)
         grid.addWidget(bb)
 
-
         w_size = int(QFontMetrics(QFont()).width(title) * 1.6)
 
         self.setMinimumWidth(w_size)
         self.setLayout(grid)
+        # self.scroll.setWidget(grid)
+
 
     def saveFileDialog(self):
         targetDirPath = QFileDialog.getExistingDirectory(self, 'save Directory', self.saveDir,
@@ -466,16 +474,8 @@ class folderServerDialog(QDialog):
             self.SaveLabel.setText('Save dir: {}'.format(self.saveDir))
         return
 
-    def fileitemDoubleClicked(self, item=None):
-        widget_item = self.fileListWidget.itemWidget(item)
-        text = ustr(widget_item.getText())
-        self.foldername = text
-        self.nameLabel.setText('your choose: {}'.format(self.foldername))
-
-
     def get_name(self):
-        return (self.foldername, self.saveDir) if self.exec_() else (None,None)
-
+        return (self.nameLabel.text(), self.saveDir) if self.exec_() else (None,None)
 
 class TrainStatus(QDialog):
     def __init__(self, checkpointDf=None, parent=None, training_log=None):

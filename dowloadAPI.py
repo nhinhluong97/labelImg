@@ -37,7 +37,7 @@ def upload_file(filename):
 # p = '/home/nhinhlap/nhinh/hoyu/tmp/error/65.15.jpg'
 # upload_file(p)
 
-def upload_gt_dir(dir_imgs, dir_gts, newName, progressBar=None):
+def upload_gt_dir(dir_imgs, dir_gts, newName):
     import time
     begin = time.time()
     zip_dir = ''
@@ -51,7 +51,7 @@ def upload_gt_dir(dir_imgs, dir_gts, newName, progressBar=None):
     num = len(os.listdir(dir_gts))
     print('upload {} files time: {}'.format(num * 2, time.time() - begin), res.status_code)
     os.remove(zipPath)
-    return
+    return res.status_code
 
 # this want get os.path.listdir('/home/ubuntu/nhinhlt/train/crnn/datasets/syn_data')
 def request_current_synDir():
@@ -115,7 +115,7 @@ def request_stop_training():
     data = {'request': True}
     r = requests.post(api_adress + "/api/stop_training", data=data)
     print('request_stop_training done:', r.status_code)
-    return
+    return r.status_code
 
 
 def request_save_notes(notes, dir_path):
@@ -123,7 +123,7 @@ def request_save_notes(notes, dir_path):
     print(data)
     r = requests.post(api_adress + '/api/save_notes', data=json.dumps(data))
     print('request_save_notes done', r.status_code)
-    return
+    return r.status_code
 
 def request_all_checkpoints():
     data = {'request': True}
@@ -145,14 +145,14 @@ def sent_synDirs_chose(synDirs_chose, pretrain, numEpoch, prefixName):
     print(data)
     r = requests.post(api_adress + '/api/train', data=json.dumps(data), )
     print('sent_synDirs_chose done', r.status_code)
-    return
+    return r.status_code
 
 def sent_checkpoint_chose(checkpoint_chose):
     data = {'chose': checkpoint_chose}
     r = requests.post(api_adress + '/api/checkpoint_chose', data=data)
     print('sent_checkpoint_chose done')
-    print(r.json())
-    return r.json()
+    # print(r.json())
+    return r.status_code
 
 def down_checkpoint_choseO(checkpoint_chose):
     data = {'chose': checkpoint_chose}
@@ -169,7 +169,7 @@ def down_checkpoint_chose(checkpoint_chose):
     print('down_checkpoint_chose done')
     # print(r.json())
 
-    return r, r.headers['filename']
+    return r, r.headers['filename'],
 
 
 def downloadHint(in_dir, out_dir):
@@ -181,26 +181,13 @@ def downloadHint(in_dir, out_dir):
     zip_dir = BASE_DIR
     zipPath = os.path.join(zip_dir, 'tmp.zip')
     zipdirImgs(in_dir, zipPath)
-    print(zipPath)
     # try:
     files = {'file': open(zipPath, 'rb')}
-    try:
-        res = requests.post(
-            url= api_adress + '/api/get_hint',
-            files=files, timeout=1000000
-        )
-    except Exception as e:
-        print(e)
+    res = requests.post(
+        url= api_adress + '/api/get_hint',
+        files=files, timeout=1000000
+    )
     data = res.json()
-    # except ConnectionError:
-    #     print('can not connect server')
-    #     return 'can not connect server'
-    # except:
-    #     if progressBar is not None:
-    #         progressBar.setRange(0, 10)
-    #         progressBar.setLabelText('can not connect server')
-    #         progressBar.delay()
-    #     return
     if res.status_code == 200:
         for i, file in enumerate(data):
             name = os.path.splitext(file)[0] + '.txt'
@@ -237,8 +224,21 @@ def downloadServerData(dataname, saveDir, data_refdir):
             shutil.unpack_archive(refs_path, extract_dir=os.path.splitext(refs_path)[0])
             refs_path = os.path.join(save_path, 'refs')
 
-            shutil.move(imgs_path, os.path.join(saveDir, dataname))
-            shutil.move(refs_path, os.path.join(data_refdir, dataname))
+            if not os.path.exists(os.path.join(saveDir, dataname)) :
+                shutil.move(imgs_path, os.path.join(saveDir, dataname))
+            else:
+                imgs = os.listdir(imgs_path)
+                for fn in imgs:
+                    shutil.move(os.path.join(imgs_path, fn), os.path.join(saveDir, dataname))
+
+
+            if  not os.path.exists(os.path.join(data_refdir, dataname)) :
+                shutil.move(refs_path, os.path.join(data_refdir, dataname))
+            else:
+                gts = os.listdir(refs_path)
+                for fn in gts:
+                    shutil.move(os.path.join(refs_path, fn), os.path.join(data_refdir, dataname))
+
 
         print('process download: {} '.format(time.time() - begin), res.status_code)
         return res.status_code
