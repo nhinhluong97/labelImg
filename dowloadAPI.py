@@ -151,7 +151,6 @@ def sent_checkpoint_chose(checkpoint_chose):
     data = {'chose': checkpoint_chose}
     r = requests.post(api_adress + '/api/checkpoint_chose', data=data)
     print('sent_checkpoint_chose done')
-    # print(r.json())
     return r.status_code
 
 def down_checkpoint_choseO(checkpoint_chose):
@@ -207,6 +206,7 @@ def downloadServerData(dataname, saveDir, data_refdir):
 
         if res.status_code == 200:
             zip_checkpoint, filename = res, res.headers['filename']
+            print(filename)
             save_path = os.path.join('.', 'tmp.zip')
             if save_path:
                 with open(save_path, 'wb') as f:
@@ -216,12 +216,7 @@ def downloadServerData(dataname, saveDir, data_refdir):
             shutil.unpack_archive(save_path, extract_dir= os.path.splitext(save_path)[0])
             save_path = os.path.splitext(save_path)[0]
 
-            imgs_path = os.path.join(save_path, 'imgs.zip')
-            shutil.unpack_archive(imgs_path, extract_dir=os.path.splitext(imgs_path)[0])
             imgs_path = os.path.join(save_path, 'imgs')
-
-            refs_path = os.path.join(save_path, 'refs.zip')
-            shutil.unpack_archive(refs_path, extract_dir=os.path.splitext(refs_path)[0])
             refs_path = os.path.join(save_path, 'refs')
 
             if not os.path.exists(os.path.join(saveDir, dataname)) :
@@ -239,12 +234,59 @@ def downloadServerData(dataname, saveDir, data_refdir):
                 for fn in gts:
                     shutil.move(os.path.join(refs_path, fn), os.path.join(data_refdir, dataname))
 
-
         print('process download: {} '.format(time.time() - begin), res.status_code)
         return res.status_code
     except Exception as e:
         print(e)
 
+#
+# def downloadServerData(dataname, saveDir, data_refdir):
+#     import time
+#     begin = time.time()
+#     try:
+#         data = {'dataname': dataname}
+#         res = requests.post(api_adress + '/api/download_Server_Data', data=data)
+#
+#         if res.status_code == 200:
+#             zip_checkpoint, filename = res, res.headers['filename']
+#             save_path = os.path.join('.', 'tmp.zip')
+#             if save_path:
+#                 with open(save_path, 'wb') as f:
+#                     for chunk in zip_checkpoint.iter_content(chunk_size=1024):
+#                         if chunk:
+#                             f.write(chunk)
+#             shutil.unpack_archive(save_path, extract_dir= os.path.splitext(save_path)[0])
+#             save_path = os.path.splitext(save_path)[0]
+#
+#             imgs_path = os.path.join(save_path, 'imgs.zip')
+#             shutil.unpack_archive(imgs_path, extract_dir=os.path.splitext(imgs_path)[0])
+#             imgs_path = os.path.join(save_path, 'imgs')
+#
+#             refs_path = os.path.join(save_path, 'refs.zip')
+#             shutil.unpack_archive(refs_path, extract_dir=os.path.splitext(refs_path)[0])
+#             refs_path = os.path.join(save_path, 'refs')
+#
+#             if not os.path.exists(os.path.join(saveDir, dataname)) :
+#                 shutil.move(imgs_path, os.path.join(saveDir, dataname))
+#             else:
+#                 imgs = os.listdir(imgs_path)
+#                 for fn in imgs:
+#                     shutil.move(os.path.join(imgs_path, fn), os.path.join(saveDir, dataname))
+#
+#
+#             if  not os.path.exists(os.path.join(data_refdir, dataname)) :
+#                 shutil.move(refs_path, os.path.join(data_refdir, dataname))
+#             else:
+#                 gts = os.listdir(refs_path)
+#                 for fn in gts:
+#                     shutil.move(os.path.join(refs_path, fn), os.path.join(data_refdir, dataname))
+#
+#
+#         print('process download: {} '.format(time.time() - begin), res.status_code)
+#         return res.status_code
+#     except Exception as e:
+#         print(e)
+#
 
 
 #
