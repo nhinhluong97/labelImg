@@ -615,7 +615,9 @@ class TrainStatus(QDialog):
         for currentQTableWidgetItem in self.tableWidget_log.selectedItems():
             row = currentQTableWidgetItem.row()
             print('on_click_log', row)
-            MainWindow.current_trainning_log()
+            istop = MainWindow.current_trainning_log()
+            if istop:
+                self.accept()
 
     def setData(self):
         # Create table

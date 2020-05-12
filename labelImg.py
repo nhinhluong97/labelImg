@@ -86,7 +86,7 @@ class RequestRunnable(QThread):
 
 
 class Dialog(QDialog):
-    def __init__(self, title, txtt, completed=False, *args, **kwargs):
+    def __init__(self, title, txtt, completed=False,autoclose=False, *args, **kwargs):
         QDialog.__init__(self)
         self.setLayout(QVBoxLayout())
         self.setWindowTitle(title)
@@ -103,6 +103,7 @@ class Dialog(QDialog):
         self.label.setStyleSheet("margin-top: 25px")
         self.completed = completed
         self.status_code = None
+        self.autoclose = autoclose
 
     def submit(self, f, *args):
         self.spinner.start()
@@ -120,6 +121,9 @@ class Dialog(QDialog):
             self.label.setText('Error!')
         self.status_code = data
         self.completed = True
+
+        if self.autoclose and self.status_code==200:
+            self.close()
 
     def closeEvent(self, evnt):
         if not self.completed:
@@ -1558,43 +1562,30 @@ class MainWindow(QMainWindow, WindowMixin):
         dialog.setWindowModality(Qt.ApplicationModal)
         dialog.exec_()
 
-        # status_code = dowloadAPI.downloadHint(os.path.abspath(self.lastOpenDir), self.refDir)
-        # if status_code == 200:
-        #     wai.mess = 'load hint completed'
-        # else:
-        #     wai.mess = 'An error occurred'
-        #     wai.delay(1000)
-        # wai.done_close()
 
     def train(self, _value=False):
         content, status_code = dowloadAPI.request_current_synDir()
         mess = None if status_code == 200 else 'server error' if status_code == 400 else 'Training is running'
+
         if mess is None:
             (current_synDir, pretrain_list, note_list) = content
             trainWind = trainDialog(parent=self, listData=current_synDir, listPretrain=pretrain_list, listnote=note_list, numEpoch=1000)
             synDirs_chose, pretrain, numEpoch, prefixName = trainWind.get_synDir_chose()
-            # print(synDirs_chose, pretrain, numEpoch, prefixName)
-            if synDirs_chose is not None:
-                # print('chose:', synDirs_chose)
 
-                dialog = Dialog(title='Waiting', txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir))
+            if synDirs_chose is not None:
+
+                dialog = Dialog(title='Waiting', txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), autoclose = True)
                 dialog.submit(dowloadAPI.sent_synDirs_chose, synDirs_chose, pretrain, numEpoch, prefixName)
                 dialog.setWindowModality(Qt.ApplicationModal)
                 dialog.exec_()
 
-                # status_code = dowloadAPI.sent_synDirs_chose(synDirs_chose, pretrain, numEpoch, prefixName)
-                # if status_code == 200:
-                #     pass
-                # else:
-                #     mess = 'server error'
-                #     wai = labelDialog2.waitDialog(title='training', txtt=mess, num=0)
-                #     wai.delay(1000)
-                #     wai.done_close()
-                #     return
+                if dialog.status_code == 200:
+                    self.current_trainning_log()
+
             else:
                 print('synDirs_chose is None')
         else:
-            mess = 'server error'
+            # mess = 'server error'
             dialog = Dialog(title='Training', txtt=mess, completed=True)
             dialog.setWindowModality(Qt.ApplicationModal)
             dialog.exec_()
@@ -1694,11 +1685,12 @@ class MainWindow(QMainWindow, WindowMixin):
                 return
         else:
             print('chose continue training:', isStop)
+        return isStop
 
 
     def choose_checkpoint(self, _value=False):
         listcheck, status_code = dowloadAPI.request_all_checkpoints()
-        if status_code != 200:
+        if status_code in [200, 201]:
             mess = 'server error'
             dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
             dialog.setWindowModality(Qt.ApplicationModal)
@@ -1707,11 +1699,8 @@ class MainWindow(QMainWindow, WindowMixin):
         chooseWind = labelDialog2.choose_checkpoint(parent=self, listcheck=listcheck)
         checkpoint_chose = chooseWind.get_chose()
         if checkpoint_chose is not None:
-            print('checkpoint_chose:', checkpoint_chose)
             status_code = dowloadAPI.sent_checkpoint_chose(checkpoint_chose)
-            if status_code == 200:
-                pass
-            else:
+            if status_code != 200:
                 mess = 'server error'
                 dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
                 dialog.setWindowModality(Qt.ApplicationModal)
@@ -1720,13 +1709,29 @@ class MainWindow(QMainWindow, WindowMixin):
         else:
             print('checkpoint_chose is None')
 
+    def down_save_checkpoint(self, checkpoint_chose):
+
+        zip_checkpoint, filename, status_code = dowloadAPI.down_checkpoint_chose(checkpoint_chose)
+        print('status_code', status_code)
+        if status_code != 200:
+            return status_code
+
+        save_path = self.saveCheckpointDialog(zip_file_name=filename)
+        if save_path:
+            with open(save_path, 'wb') as f:
+                for chunk in zip_checkpoint.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+
+        return status_code
+
     def download_checkpoint(self, _value=False):
         listcheck, status_code = dowloadAPI.request_all_checkpoints()
-        if status_code != 200:
+        if status_code not in  [200, 201]:
             mess = 'server error'
-            wai = labelDialog2.waitDialog(title='download_checkpoint', txtt=mess, num=0)
-            wai.delay(1000)
-            wai.done_close()
+            dialog = Dialog(title='download_checkpoint', txtt=mess, completed=True)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
             return
 
         chooseWind = download_checkpoint(parent=self, listcheck=listcheck)
@@ -1734,24 +1739,12 @@ class MainWindow(QMainWindow, WindowMixin):
 
         if checkpoint_chose is not None:
             print('synDirs_chose:', checkpoint_chose)
-            wai = labelDialog2.waitDialog(txtt='wait awhile, until download done', num=0)
 
-            zip_checkpoint, filename = dowloadAPI.down_checkpoint_chose(checkpoint_chose)
-
-            # if status_code != 200:
-            #     mess = 'server error'
-            #     wai = labelDialog2.waitDialog(title='download_checkpoint', txtt=mess, num=0)
-            #     wai.delay(1000)
-            #     wai.done_close()
-            #     return
-
-            wai.done_close()
-            save_path = self.saveCheckpointDialog(zip_file_name=filename)
-            if save_path:
-                with open(save_path, 'wb') as f:
-                    for chunk in zip_checkpoint.iter_content(chunk_size=1024):
-                        if chunk:
-                            f.write(chunk)
+            dialog = Dialog(title='download_checkpoint',
+                            txtt='wait awhile, until download done')
+            dialog.submit(self.down_save_checkpoint, checkpoint_chose)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
         else:
             print('synDirs_chose is None')
 

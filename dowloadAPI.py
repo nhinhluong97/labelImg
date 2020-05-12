@@ -5,11 +5,31 @@ import json
 import zipfile
 import shutil
 import pandas as pd
-api_adress = 'http://54.249.71.234:5050'
 
+DATA_DIR = './datasets'
+
+api_adress = 'http://54.249.71.234:5555'
+# api_adress = 'http://54.249.71.234:5050'
+
+address_test_file = '/api/process'
+address_upload_gt_dir = '/api/upload_gtdir'
+address_current_synDir = "/api/current_synDir"
+address_list_data_dir =  "/api/list_data_dir"
+address_train_status =  "/api/train_status"
+address_trainning_history =  "/api/trainning_history"
+address_trainning_log =  "/api/trainning_log"
+address_stop_training =  "/api/stop_training"
+address_save_notes =  '/api/save_notes'
+address_train =  '/api/train'
+address_checkpoint_chose =  '/api/checkpoint_chose'
+address_down_checkpoint =  '/api/down_checkpoint2'
+address_get_hint =  '/api/get_hint'
+download_Server_Data =  '/api/download_Server_Data'
+
+allowExtend = ['.jpg', '.JPG', '.png', '.PNG', '.jpeg', '.JPEG']
 def zipdir(imgpath,gtpath,  zipout):
+    global allowExtend
     ziph = zipfile.ZipFile(zipout, "w", zipfile.ZIP_DEFLATED)
-    allowExtend = ['.jpg', '.JPG', '.png', '.PNG', '.jpeg', '.JPEG']
 
     for f in os.listdir(gtpath):
         if os.path.splitext(f)[-1] == '.txt':
@@ -29,23 +49,19 @@ def zipdirImgs(imgpath, zipout):
 def upload_file(filename):
     files = {'file': open(filename, 'rb')}
     r = requests.post(api_adress
-                      + '/api/process'
+                      + address_test_file
                       , files=files, )
     print(r.json())
     return
 
-# p = '/home/nhinhlap/nhinh/hoyu/tmp/error/65.15.jpg'
-# upload_file(p)
-
 def upload_gt_dir(dir_imgs, dir_gts, newName):
     import time
     begin = time.time()
-    zip_dir = ''
-    zipPath = os.path.join(zip_dir, '{}.zip'.format(newName))
+    zipPath = os.path.join(DATA_DIR, '{}.zip'.format(newName))
     zipdir(dir_imgs, dir_gts, zipPath)
     files = {'file': open(zipPath, 'rb')}
     res = requests.post(
-        url=api_adress + '/api/upload_gtdir',
+        url=api_adress + address_upload_gt_dir,
         files=files
     )
     num = len(os.listdir(dir_gts))
@@ -53,25 +69,23 @@ def upload_gt_dir(dir_imgs, dir_gts, newName):
     os.remove(zipPath)
     return res.status_code
 
-# this want get os.path.listdir('/home/ubuntu/nhinhlt/train/crnn/datasets/syn_data')
 def request_current_synDir():
     data = {'request': True}
-    r = requests.post(api_adress + "/api/current_synDir", data=data )
+    r = requests.post(api_adress + address_current_synDir, data=data )
     print(r.json())
     print('request_current_synDir done', r.status_code)
     return r.json(), r.status_code
 
-# this want get os.path.listdir('/home/ubuntu/nhinhlt/train/crnn/datasets/syn_data')
 def request_list_data_dir():
     data = {'request': True}
-    r = requests.post(api_adress + "/api/list_data_dir", data=data )
+    r = requests.post(api_adress + address_list_data_dir, data=data )
     # print(r.json())
     print('request_list_data_dir done', r.status_code)
     return r.json(), r.status_code
 
 def request_train_status():
     data = {'request': True}
-    r = requests.post(api_adress + "/api/train_status", data=data)
+    r = requests.post(api_adress + address_train_status, data=data)
     if r.status_code == 200 or r.status_code==201:
         ret = r.json()
         df = json.loads(ret['df'])
@@ -86,7 +100,7 @@ def request_train_status():
 
 def request_trainning_history(cpt_name):
     data = {'cpt_name': cpt_name}
-    r = requests.post(api_adress + "/api/trainning_history", data=data)
+    r = requests.post(api_adress + address_trainning_history, data=data)
     if r.status_code == 200 or r.status_code == 201:
         ret = json.loads(r.json())
         ret = pd.DataFrame.from_dict(ret)
@@ -98,7 +112,7 @@ def request_trainning_history(cpt_name):
 
 def request_current_trainning_log():
     data = {'request': True}
-    r = requests.post(api_adress + "/api/trainning_log", data=data)
+    r = requests.post(api_adress + address_trainning_log, data=data)
     if r.status_code == 200:
         ret = r.json()
         df = json.loads(ret['df'])
@@ -113,7 +127,7 @@ def request_current_trainning_log():
 
 def request_stop_training():
     data = {'request': True}
-    r = requests.post(api_adress + "/api/stop_training", data=data)
+    r = requests.post(api_adress + address_stop_training, data=data)
     print('request_stop_training done:', r.status_code)
     return r.status_code
 
@@ -121,13 +135,13 @@ def request_stop_training():
 def request_save_notes(notes, dir_path):
     data = {'notes': notes, 'dir_path': dir_path}
     print(data)
-    r = requests.post(api_adress + '/api/save_notes', data=json.dumps(data))
+    r = requests.post(api_adress + address_save_notes, data=json.dumps(data))
     print('request_save_notes done', r.status_code)
     return r.status_code
 
 def request_all_checkpoints():
     data = {'request': True}
-    r = requests.post(api_adress + "/api/train_status", data=data)
+    r = requests.post(api_adress + address_train_status, data=data)
     if r.status_code == 200 or r.status_code == 201:
         ret = r.json()
         df = json.loads(ret['df'])
@@ -143,49 +157,41 @@ def request_all_checkpoints():
 def sent_synDirs_chose(synDirs_chose, pretrain, numEpoch, prefixName):
     data = {'chose': synDirs_chose, 'pretrain':str(pretrain), 'numEpoch':numEpoch, 'prefixName': str(prefixName)}
     print(data)
-    r = requests.post(api_adress + '/api/train', data=json.dumps(data), )
+    r = requests.post(api_adress + address_train, data=json.dumps(data), )
     print('sent_synDirs_chose done', r.status_code)
     return r.status_code
 
 def sent_checkpoint_chose(checkpoint_chose):
     data = {'chose': checkpoint_chose}
-    r = requests.post(api_adress + '/api/checkpoint_chose', data=data)
+    r = requests.post(api_adress + address_checkpoint_chose, data=data)
     print('sent_checkpoint_chose done')
     return r.status_code
 
-def down_checkpoint_choseO(checkpoint_chose):
-    data = {'chose': checkpoint_chose}
-    r = requests.post(api_adress + '/api/down_checkpoint', data=data)
-    # r = requests.post(api_adress + '/down_checkpoint', data=data)
-    print('down_checkpoint_chose done')
-    # print(r.json())
-    return r
-
 def down_checkpoint_chose(checkpoint_chose):
     data = {'chose': checkpoint_chose}
-    r = requests.post(api_adress + '/api/down_checkpoint', data=data)
+    r = requests.post(api_adress + address_down_checkpoint, data=data)
     # r = requests.post(api_adress + '/down_checkpoint', data=data)
     print('down_checkpoint_chose done')
     # print(r.json())
-
-    return r, r.headers['filename'],
-
+    if r.status_code==200:
+        return r, r.headers['filename'], r.status_code
+    else:
+        return None, None, r.status_code
 
 def downloadHint(in_dir, out_dir):
     import time
     begin = time.time()
     file_list = os.listdir(in_dir)
-    import shutil
-    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    zip_dir = BASE_DIR
-    zipPath = os.path.join(zip_dir, 'tmp.zip')
+    zipPath = os.path.join(DATA_DIR, 'tmp.zip')
     zipdirImgs(in_dir, zipPath)
     # try:
     files = {'file': open(zipPath, 'rb')}
     res = requests.post(
-        url= api_adress + '/api/get_hint',
+        url= api_adress + address_get_hint,
         files=files, timeout=1000000
     )
+    os.remove(zipPath)
+
     data = res.json()
     if res.status_code == 200:
         for i, file in enumerate(data):
@@ -203,11 +209,11 @@ def downloadServerData(dataname, saveDir, data_refdir):
     begin = time.time()
     try:
         data = {'dataname': dataname}
-        res = requests.post(api_adress + '/api/download_Server_Data', data=data)
+        res = requests.post(api_adress + download_Server_Data, data=data)
 
         if res.status_code == 200:
             zip_checkpoint, filename = res, res.headers['filename']
-            save_path = os.path.join('.', 'tmp.zip')
+            save_path = os.path.join(DATA_DIR, 'tmp.zip')
             if save_path:
                 with open(save_path, 'wb') as f:
                     for chunk in zip_checkpoint.iter_content(chunk_size=1024):
@@ -240,8 +246,8 @@ def downloadServerData(dataname, saveDir, data_refdir):
                     shutil.move(os.path.join(refs_path, fn), os.path.join(data_refdir, dataname))
             if os.path.exists(save_path):
                 shutil.rmtree(save_path)
-            if os.path.exists(os.path.join('.', 'tmp.zip')):
-                os.remove(os.path.join('.', 'tmp.zip'))
+            if os.path.exists(os.path.join(DATA_DIR, 'tmp.zip')):
+                os.remove(os.path.join(DATA_DIR, 'tmp.zip'))
 
         print('process download: {} '.format(time.time() - begin), res.status_code)
         return res.status_code
