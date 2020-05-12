@@ -40,7 +40,7 @@ from libs.labelDialog2 import *
 from libs import labelDialog2
 from libs.custom_widget import QCustomQWidget
 import dowloadAPI
-
+from libs.WaitingSpinnerWidget import WaitingSpinner
 # from libs.treeLabelWidget import TreeLabel
 
 __appname__ = 'labelImg'
@@ -65,6 +65,65 @@ class WindowMixin(object):
         self.addToolBar(Qt.LeftToolBarArea, toolbar)
         return toolbar
 
+class RequestRunnable(QThread):
+    signal = pyqtSignal(int)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.func = None
+
+    def set_args(self, f, *args):
+        self.args = args
+        self.func = f
+
+    def run(self):
+        try:
+            status_code = self.func(*self.args[0])
+            self.signal.emit(status_code)
+        except Exception as e:
+            print(e)
+            self.signal.emit(-1)
+
+
+class Dialog(QDialog):
+    def __init__(self, title, txtt, completed=False, *args, **kwargs):
+        QDialog.__init__(self)
+        self.setLayout(QVBoxLayout())
+        self.setWindowTitle(title)
+        self.resize(300, 60)
+        self.setWindowFlags(self.windowFlags() & Qt.WindowCloseButtonHint)
+        self.spinner = WaitingSpinner(self, roundness=100.0, opacity=15.0,
+                                      fade=70.0, radius=20.0, lines=15,
+                                      line_length=25.0, line_width=13.0,
+                                      speed=1.0, color=(255, 255, 255))
+        self.label = QLabel(txtt)
+        self.layout().addWidget(self.spinner)
+        self.layout().addWidget(self.label)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("margin-top: 25px")
+        self.completed = completed
+        self.status_code = None
+
+    def submit(self, f, *args):
+        self.spinner.start()
+        self.runnable = RequestRunnable(self)
+        self.runnable.signal.connect(self.setData)
+        self.runnable.set_args(f, args)
+        self.runnable.start()
+
+    def setData(self, data):
+        self.spinner.stop()
+        self.label.setStyleSheet("font-size: 25px")
+        if data == 200:
+            self.label.setText('Completed!')
+        else:
+            self.label.setText('Error!')
+        self.status_code = data
+        self.completed = True
+
+    def closeEvent(self, evnt):
+        if not self.completed:
+            evnt.ignore()
 
 
 class MainWindow(QMainWindow, WindowMixin):
@@ -1406,9 +1465,14 @@ class MainWindow(QMainWindow, WindowMixin):
         content, status_code = dowloadAPI.request_current_synDir()
         if status_code == 400:
             mess = 'server error'
-            wai = labelDialog2.waitDialog(title='upload', txtt=mess, num=0)
-            wai.delay(1000)
-            wai.done_close()
+            # wai = labelDialog2.waitDialog(title='upload', txtt=mess, num=0)
+            # wai.delay(1000)
+            # wai.done_close()
+
+            dialog = Dialog(title='Warning', txtt=mess, completed=True)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
+
             return
 
         (exists_folders, _, _) = content
@@ -1416,19 +1480,14 @@ class MainWindow(QMainWindow, WindowMixin):
         uploadName = upLoadWind.get_name()
         if uploadName is not None:
             print('uploadName: ',uploadName)
-            wai = labelDialog2.waitDialog(title='uploading', txtt='wait awhile, until upload {} done\n From path: {}'.format(uploadName, self.defaultSaveDir),
-                             num=0)
-            status_code = dowloadAPI.upload_gt_dir(os.path.abspath(self.lastOpenDir), os.path.abspath(self.defaultSaveDir),
-                                     newName=uploadName)
-            if status_code != 200:
-                mess = 'server error'
-                wai = labelDialog2.waitDialog(title='upload', txtt=mess, num=0)
-                wai.delay(1000)
-                wai.done_close()
-                return
+            # wai = labelDialog2.waitDialog(title='uploading', txtt='wait awhile, until upload {} done\n From path: {}'.format(uploadName, self.defaultSaveDir),
+            #                  num=0)
 
-            wai.mess = 'upload completed'
-            wai.done_close()
+            dialog = Dialog(title='download dataset', txtt='wait awhile, until upload {} done\n From path: {}'.format(uploadName, self.defaultSaveDir))
+            dialog.submit(dowloadAPI.upload_gt_dir, os.path.abspath(self.lastOpenDir), os.path.abspath(self.defaultSaveDir), uploadName)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
+
         else:
             print('uploadName is', uploadName)
 
@@ -1438,9 +1497,13 @@ class MainWindow(QMainWindow, WindowMixin):
         content, status_code = dowloadAPI.request_list_data_dir()
         if status_code != 200:
             mess = 'server error'
-            wai = labelDialog2.waitDialog(title='download dataset', txtt=mess, num=0)
-            wai.delay(1000)
-            wai.done_close()
+            # wai = labelDialog2.waitDialog(title='download dataset', txtt=mess, num=0)
+            # wai.delay(1000)
+            # wai.done_close()
+
+            dialog = Dialog(title='Warning', txtt=mess, completed=True)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
             return
 
         data_folders = content
@@ -1448,20 +1511,27 @@ class MainWindow(QMainWindow, WindowMixin):
         name, saveDir = upLoadWind.get_name()
         if name is not None:
             print('name:', name)
-            wai = labelDialog2.waitDialog(title='download dataset', txtt='wait awhile, until download {} done\n save in: {}'.format(name, saveDir),
-                             num=0)
-            status_code = dowloadAPI.downloadServerData(name, saveDir, self.data_refdir)
+            # wai = labelDialog2.waitDialog(title='download dataset', txtt='wait awhile, until download {} done\n save in: {}'.format(name, saveDir),
+            #                  num=0)
+            # status_code = dowloadAPI.downloadServerData(name, saveDir, self.data_refdir)
+
+            dialog = Dialog(title='download dataset', txtt='wait awhile, until download {} done\n save in: {}'.format(name, saveDir))
+            dialog.submit(dowloadAPI.downloadServerData, name, saveDir, self.data_refdir)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
+
+            status_code = dialog.status_code
             if status_code == 200:
                 self.importDirImages(dirpath=os.path.join(saveDir, name), DownRef=False)
             else:
-                mess = 'server error'
-                wai = labelDialog2.waitDialog(title='download dataset', txtt=mess, num=0)
-                wai.delay(1000)
-                wai.done_close()
+                # mess = 'server error'
+                # dialog = Dialog(title='download dataset', txtt=mess, completed=True)
+                # dialog.setWindowModality(Qt.ApplicationModal)
+                # dialog.exec_()
                 return
             # self.lastOpenDir , self.defaultSaveDir = os.path.join(saveDir, newName)
-            wai.mess = 'download completed'
-            wai.done_close()
+            # wai.mess = 'download completed'
+            # wai.done_close()
         else:
             print('newName is', name)
             print('saveDir', saveDir)
@@ -1477,18 +1547,24 @@ class MainWindow(QMainWindow, WindowMixin):
             QMessageBox.information(self, "Message", mess)
             return
 
-        wai = labelDialog2.waitDialog(txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), num=0)
+        # wai = labelDialog2.waitDialog(txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), num=0)
         output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
         self.refDir = os.path.join(self.data_refdir, output_name)
         if not os.path.exists(self.refDir):
             os.mkdir(self.refDir)
-        status_code = dowloadAPI.downloadHint(os.path.abspath(self.lastOpenDir), self.refDir)
-        if status_code == 200:
-            wai.mess = 'load hint completed'
-        else:
-            wai.mess = 'An error occurred'
-            wai.delay(1000)
-        wai.done_close()
+
+        dialog = Dialog(title='Waiting', txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir))
+        dialog.submit(dowloadAPI.downloadHint, os.path.abspath(self.lastOpenDir), self.refDir)
+        dialog.setWindowModality(Qt.ApplicationModal)
+        dialog.exec_()
+
+        # status_code = dowloadAPI.downloadHint(os.path.abspath(self.lastOpenDir), self.refDir)
+        # if status_code == 200:
+        #     wai.mess = 'load hint completed'
+        # else:
+        #     wai.mess = 'An error occurred'
+        #     wai.delay(1000)
+        # wai.done_close()
 
     def train(self, _value=False):
         content, status_code = dowloadAPI.request_current_synDir()
@@ -1499,22 +1575,32 @@ class MainWindow(QMainWindow, WindowMixin):
             synDirs_chose, pretrain, numEpoch, prefixName = trainWind.get_synDir_chose()
             # print(synDirs_chose, pretrain, numEpoch, prefixName)
             if synDirs_chose is not None:
-                print('chose:', synDirs_chose)
-                status_code = dowloadAPI.sent_synDirs_chose(synDirs_chose, pretrain, numEpoch, prefixName)
-                if status_code == 200:
-                    pass
-                else:
-                    mess = 'server error'
-                    wai = labelDialog2.waitDialog(title='training', txtt=mess, num=0)
-                    wai.delay(1000)
-                    wai.done_close()
-                    return
+                # print('chose:', synDirs_chose)
+
+                dialog = Dialog(title='Waiting', txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir))
+                dialog.submit(dowloadAPI.sent_synDirs_chose, synDirs_chose, pretrain, numEpoch, prefixName)
+                dialog.setWindowModality(Qt.ApplicationModal)
+                dialog.exec_()
+
+                # status_code = dowloadAPI.sent_synDirs_chose(synDirs_chose, pretrain, numEpoch, prefixName)
+                # if status_code == 200:
+                #     pass
+                # else:
+                #     mess = 'server error'
+                #     wai = labelDialog2.waitDialog(title='training', txtt=mess, num=0)
+                #     wai.delay(1000)
+                #     wai.done_close()
+                #     return
             else:
                 print('synDirs_chose is None')
         else:
-            wai = labelDialog2.waitDialog(title='training', txtt=mess, num=0)
-            wai.delay(1000)
-            wai.done_close()
+            mess = 'server error'
+            dialog = Dialog(title='Training', txtt=mess, completed=True)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
+            # wai = labelDialog2.waitDialog(title='training', txtt=mess, num=0)
+            # wai.delay(1000)
+            # wai.done_close()
 
 
     def trainning_status(self, _value=False):
@@ -1522,9 +1608,14 @@ class MainWindow(QMainWindow, WindowMixin):
         checkpointDf, training_log, status_code = dowloadAPI.request_train_status()
 
         if status_code not in [201, 200]:
-            wai = labelDialog2.waitDialog(title = 'trainning_status', txtt='server error', num=0)
-            wai.delay(1000)
-            wai.done_close()
+            # wai = labelDialog2.waitDialog(title = 'trainning_status', txtt='server error', num=0)
+            # wai.delay(1000)
+            # wai.done_close()
+
+            mess = 'server error'
+            dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
             return
 
         win_status = TrainStatus(checkpointDf=checkpointDf, training_log=training_log)
@@ -1537,9 +1628,12 @@ class MainWindow(QMainWindow, WindowMixin):
                 pass
             else:
                 mess = 'server error'
-                wai = labelDialog2.waitDialog(title='save notes', txtt=mess, num=0)
-                wai.delay(1000)
-                wai.done_close()
+                # wai = labelDialog2.waitDialog(title='save notes', txtt=mess, num=0)
+                # wai.delay(1000)
+                # wai.done_close()
+                dialog = Dialog(title='save notes', txtt=mess, completed=True)
+                dialog.setWindowModality(Qt.ApplicationModal)
+                dialog.exec_()
                 return
         else:
             print('notes is None:', notes)
@@ -1549,9 +1643,11 @@ class MainWindow(QMainWindow, WindowMixin):
         checkpointDf, status_code = dowloadAPI.request_trainning_history(cpt_name)
 
         if status_code not in [200]:
-            wai = labelDialog2.waitDialog(title='train_history', txtt='server error', num=0)
-            wai.delay(1000)
-            wai.done_close()
+            mess = 'server error'
+            dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
+            return
 
         win_status = labelDialog2.trainning_history_dialog(checkpointDf=checkpointDf)
         notes = win_status.get_note()
@@ -1564,9 +1660,9 @@ class MainWindow(QMainWindow, WindowMixin):
                 pass
             else:
                 mess = 'server error'
-                wai = labelDialog2.waitDialog(title='save notes', txtt=mess, num=0)
-                wai.delay(1000)
-                wai.done_close()
+                dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+                dialog.setWindowModality(Qt.ApplicationModal)
+                dialog.exec_()
                 return
         else:
             print('notes is None:', notes)
@@ -1592,9 +1688,9 @@ class MainWindow(QMainWindow, WindowMixin):
                 pass
             else:
                 mess = 'server error'
-                wai = labelDialog2.waitDialog(title='stop training', txtt=mess, num=0)
-                wai.delay(1000)
-                wai.done_close()
+                dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+                dialog.setWindowModality(Qt.ApplicationModal)
+                dialog.exec_()
                 return
         else:
             print('chose continue training:', isStop)
@@ -1604,9 +1700,9 @@ class MainWindow(QMainWindow, WindowMixin):
         listcheck, status_code = dowloadAPI.request_all_checkpoints()
         if status_code != 200:
             mess = 'server error'
-            wai = labelDialog2.waitDialog(title='switch checkpoint', txtt=mess, num=0)
-            wai.delay(1000)
-            wai.done_close()
+            dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+            dialog.setWindowModality(Qt.ApplicationModal)
+            dialog.exec_()
             return
         chooseWind = labelDialog2.choose_checkpoint(parent=self, listcheck=listcheck)
         checkpoint_chose = chooseWind.get_chose()
@@ -1617,9 +1713,9 @@ class MainWindow(QMainWindow, WindowMixin):
                 pass
             else:
                 mess = 'server error'
-                wai = labelDialog2.waitDialog(title='switch checkpoint', txtt=mess, num=0)
-                wai.delay(1000)
-                wai.done_close()
+                dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+                dialog.setWindowModality(Qt.ApplicationModal)
+                dialog.exec_()
                 return
         else:
             print('checkpoint_chose is None')

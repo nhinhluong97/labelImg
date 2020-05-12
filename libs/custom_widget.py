@@ -92,7 +92,7 @@ class QCustomQWidget_3(QWidget):
         # self.iconQLabel.setMaximumWidth(50)
         self.textUpQLabel.setText(self.text)
         self.textUpQLabel.setFont(QFont('SansSerif', 10))
-        self.nameLabel=nameLabel
+        self.nameLabel = nameLabel
 
     def getText(self):
         return self.text

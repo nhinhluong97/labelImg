@@ -349,7 +349,7 @@ class waitDialog(QProgressDialog):
 
 class uploadDialog(QDialog):
 
-    def __init__(self, parent=None,  name='', exists_folders = ['a', 'b', 'c']):
+    def __init__(self, parent=None,  name='', exists_folders = ['aa', 'ccc', 'dd', 'ee']*10):
         super(uploadDialog, self).__init__(parent)
         title = 'uploading'
         self.setWindowTitle(title)
@@ -359,32 +359,30 @@ class uploadDialog(QDialog):
         grid.addWidget(self.exists_folders_label)
 
         self.exists_folders = exists_folders
-        self.fileListWidget = QListWidget()
-        self.fileListWidget.itemDoubleClicked.connect(self.fileitemDoubleClicked)
-        self.fileListWidget.itemClicked.connect(self.fileitemDoubleClicked)
-        folder_icon_path = 'resources/icons/open.png'
-        for fname in self.exists_folders:
-            myQCustomQWidget = QCustomQWidget_2(folder_icon_path, text=fname)
-            item = QListWidgetItem()
-            item.setSizeHint(myQCustomQWidget.sizeHint())
-            self.fileListWidget.addItem(item)
-            self.fileListWidget.setItemWidget(item, myQCustomQWidget)
 
-        grid.addWidget(self.fileListWidget)
+        self.scrollArea = QScrollArea(self)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.fileListWidget = QGridLayout(self.scrollAreaWidgetContents)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        grid.addWidget(self.scrollArea)
 
         self.nameLabel = QLabel('folder name to upload')
-        grid.addWidget(self.nameLabel)
+
         self.nameEdit = QLineEdit()
         self.nameEdit.setPlaceholderText('folder name to upload')
         self.nameEdit.setText('{}'.format(name))
-        # self.nameEdit.setValidator(QIntValidator())
+
+        folder_icon_path = 'resources/icons/open.png'
+        for i, fname in enumerate(self.exists_folders):
+            myQCustomQWidget = QCustomQWidget_3(folder_icon_path, text=fname, nameLabel=self.nameEdit)
+            self.fileListWidget.addWidget(myQCustomQWidget, i//3, i%3)
+
+        grid.addWidget(self.nameLabel)
         grid.addWidget(self.nameEdit)
 
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
-        # bb.button(BB.Ok).setIcon(newIcon('done'))
-        # bb.button(BB.Ok).setText('Train')
 
-        # bb.button(BB.Cancel).setIcon(('undo'))
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
         grid.addWidget(bb)
@@ -394,16 +392,80 @@ class uploadDialog(QDialog):
         self.setMinimumWidth(w_size)
         self.setLayout(grid)
 
-    def fileitemDoubleClicked(self, item=None):
-        # print(item)
-        # item
-        widget_item = self.fileListWidget.itemWidget(item)
-        text = ustr(widget_item.getText())
-        self.nameEdit.setText('{}'.format(text))
-
-
     def get_name(self):
         return self.nameEdit.text() if self.exec_() else None
+
+# class uploadDialog(QDialog):
+#
+#     def __init__(self, parent=None, exists_folders = ['aa', 'ccc', 'dd', 'ee']*10):
+#         super(uploadDialog, self).__init__(parent)
+#         title = 'get data from server'
+#         self.setWindowTitle(title)
+#         grid = QGridLayout()
+#
+#         self.exists_folders_label = QLabel('exists data in server')
+#         grid.addWidget(self.exists_folders_label)
+#
+#
+#         self.exists_folders = exists_folders
+#         # self.fileListWidget = QGridLayout()
+#         self.scrollArea = QScrollArea(self)
+#         self.scrollArea.setWidgetResizable(True)
+#         self.scrollAreaWidgetContents = QWidget()
+#         self.fileListWidget = QGridLayout(self.scrollAreaWidgetContents)
+#         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+#         grid.addWidget(self.scrollArea)
+#
+#         self.foldername = None
+#         self.Label1 = QLabel('your choose:')
+#         self.nameLabel = QLabel('{}'.format(self.foldername))
+#
+#         folder_icon_path = 'resources/icons/open.png'
+#         for i, fname in enumerate(self.exists_folders):
+#             myQCustomQWidget = QCustomQWidget_3(folder_icon_path, text=fname, nameLabel=self.nameLabel)
+#             self.fileListWidget.addWidget(myQCustomQWidget, i//3, i%3)
+#
+#         # grid.addItem(self.fileListWidget)
+#
+#         nameLabelLayout = QHBoxLayout()
+#         nameLabelLayout.addWidget(self.Label1)
+#         nameLabelLayout.addWidget(self.nameLabel)
+#         grid.addChildLayout(nameLabelLayout)
+#
+#         self.saveDirLayout = QHBoxLayout()
+#
+#         self.saveDir =  os.getcwd()
+#         self.saveDirBtn = QPushButton('Save dir')
+#         self.saveDirBtn.clicked.connect(self.saveFileDialog)
+#         self.saveDirLayout.addWidget(self.saveDirBtn)
+#
+#         self.SaveLabel = QLabel('Save dir: {}'.format(self.saveDir))
+#         self.saveDirLayout.addWidget(self.SaveLabel)
+#         grid.addItem(self.saveDirLayout)
+#
+#         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
+#
+#         bb.accepted.connect(self.accept)
+#         bb.rejected.connect(self.reject)
+#         grid.addWidget(bb)
+#
+#         w_size = int(QFontMetrics(QFont()).width(title) * 1.6)
+#
+#         self.setMinimumWidth(w_size)
+#         self.setLayout(grid)
+#         # self.scroll.setWidget(grid)
+#
+#
+#     def saveFileDialog(self):
+#         targetDirPath = QFileDialog.getExistingDirectory(self, 'save Directory', self.saveDir,
+#                                                          QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
+#         if targetDirPath is not None and len(targetDirPath) > 1:
+#             self.saveDir = targetDirPath
+#             self.SaveLabel.setText('Save dir: {}'.format(self.saveDir))
+#         return
+#
+#     def get_name(self):
+#         return (self.nameLabel.text(), self.saveDir) if self.exec_() else (None,None)
 
 class folderServerDialog(QDialog):
 
@@ -429,6 +491,9 @@ class folderServerDialog(QDialog):
         self.foldername = None
         self.Label1 = QLabel('your choose:')
         self.nameLabel = QLabel('{}'.format(self.foldername))
+        self.nameLabelLayout = QHBoxLayout()
+        self.nameLabelLayout.addWidget(self.Label1)
+        self.nameLabelLayout.addWidget(self.nameLabel)
 
         folder_icon_path = 'resources/icons/open.png'
         for i, fname in enumerate(self.data_folders):
@@ -437,10 +502,7 @@ class folderServerDialog(QDialog):
 
         # grid.addItem(self.fileListWidget)
 
-        nameLabelLayout = QHBoxLayout()
-        nameLabelLayout.addWidget(self.Label1)
-        nameLabelLayout.addWidget(self.nameLabel)
-        grid.addChildLayout(nameLabelLayout)
+        grid.addItem(self.nameLabelLayout)
 
         self.saveDirLayout = QHBoxLayout()
 
@@ -637,55 +699,6 @@ class TrainStatus(QDialog):
         df = df.append([{'name': 'None', 'time': 'nadfffffffff', 'loss': 'nfffffffffffffffffffffffffffffffffffffffffffff', 'best': 'None'}])
         df = df.append([{'name': 'None', 'time': 'None', 'loss': 'None', 'best': 'None'}])
         df = df.append([{'name': 'None', 'time': 'None', 'loss': 'None', 'best': 'None'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
-        df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
         df = df.append([{'name': 100, 'time': '22.19', 'loss': 0.9, 'best': '0'}])
         return df
 
