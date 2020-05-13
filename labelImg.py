@@ -1520,6 +1520,23 @@ class MainWindow(QMainWindow, WindowMixin):
             print('newName is', name)
             print('saveDir', saveDir)
 
+    def updateFileList(self):
+        self.fileListWidget.clear()
+        self.mImgList = self.scanAllImages(self.lastOpenDir)
+        for imgPath in self.mImgList:
+            myQCustomQWidget = QCustomQWidget(imgPath)
+            item = QListWidgetItem()
+            item.setSizeHint(myQCustomQWidget.sizeHint())
+            self.fileListWidget.addItem(item)
+            self.fileListWidget.setItemWidget(item, myQCustomQWidget)
+
+        if self.filePath in self.mImgList:
+            self.loadFile(self.filePath)
+        else:
+            self.filePath = None
+            self.dirty = False
+            self.openNextImg()
+
     def download(self, _value=False):
         print('download', self.lastOpenDir)
         if self.lastOpenDir is None:
@@ -1527,7 +1544,7 @@ class MainWindow(QMainWindow, WindowMixin):
             QMessageBox.information(self, "Message", mess)
             return
         elif not os.path.exists(self.lastOpenDir):
-            mess = 'Drerequisite, must open a folder and choose save folder'
+            mess = 'Prerequisite, must open a folder and choose save folder'
             QMessageBox.information(self, "Message", mess)
             return
 
@@ -1540,6 +1557,8 @@ class MainWindow(QMainWindow, WindowMixin):
         dialog.submit(dowloadAPI.downloadHint, os.path.abspath(self.lastOpenDir), self.refDir)
         dialog.setWindowModality(Qt.ApplicationModal)
         dialog.exec_()
+        self.updateFileList()
+
 
 
     def train(self, _value=False):
@@ -1552,7 +1571,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
             if synDirs_chose is not None:
 
-                dialog = Dialog(title='Waiting', txtt='Wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), autoclose = True)
+                dialog = Dialog(title='Waiting', txtt='Wait awhile, until request done', autoclose = True)
                 dialog.submit(dowloadAPI.sent_synDirs_chose, synDirs_chose, pretrain, numEpoch, prefixName)
                 dialog.setWindowModality(Qt.ApplicationModal)
                 dialog.exec_()
