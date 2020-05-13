@@ -7,18 +7,21 @@ try:
 except ImportError:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
-from labelImg import MainWindow
+# from labelImg import MainWindow
 import pandas as pd
 from libs.utils import newIcon, labelValidator
 from libs.custom_widget import QCustomQWidget_2, QCustomQWidget_3
 from libs.ustr import ustr
 import os
 BB = QDialogButtonBox
+folder_icon_path = 'resources/icons/open.png'
 
 class LabelDialog(QDialog):
 
-    def __init__(self, text="Enter object label", parent=None, label=None, subLabels=None):
-        super(LabelDialog, self).__init__(parent)
+    def __init__(self, parent=None, label=None, subLabels=None):
+        super(LabelDialog, self).__init__()
+        title = 'label win'
+        self.setWindowTitle(title)
 
         self.count = 0
         self.layout = QGridLayout()
@@ -31,10 +34,10 @@ class LabelDialog(QDialog):
             for lb in subLabels:
                 self.addLabel(lb)
 
-        self.addBtn = QPushButton('add')
+        self.addBtn = QPushButton('Add')
         self.addBtn.clicked.connect( lambda x: self.addLabel(txt=None, listHint=[], opt=True))
 
-        self.saveCheckBox = QCheckBox('save format')
+        self.saveCheckBox = QCheckBox('Save format')
         self.saveCheckBox.setChecked(False)
 
         checkAddLayout = QVBoxLayout()
@@ -47,14 +50,14 @@ class LabelDialog(QDialog):
         bb.accepted.connect(self.validate)
         bb.rejected.connect(self.reject)
 
-
-
         self.layout.addLayout(self.layout_label, 0,0)
         self.layout.addLayout(checkAddLayout, 0, 1)
 
         # self.layout.addWidget(self.addBtn, 1, 1)
         self.layout.addWidget(bb, 2, 0)
         self.setLayout(self.layout)
+        # self.setWindowFlag(Qt.FramelessWindowHint)
+
 
     def updateLayout(self):
         # for idx, lb in enumerate(self.listLabel):
@@ -95,7 +98,7 @@ class LabelDialog(QDialog):
         singleLB.addWidget(edit, 0, 0)
 
         if opt:
-            btn = QPushButton('remove')
+            btn = QPushButton('Remove')
             btn.clicked.connect(lambda i: self.removeLabel(singleLB))
             singleLB.addWidget(btn, 0, 1)
 
@@ -104,10 +107,6 @@ class LabelDialog(QDialog):
 
 
     def validate(self):
-        # retList = self.getLabels()
-        # print('retList:', retList)
-        # self.accept()
-        # self.close()
         try:
             if all([l.itemAt(0).widget().text().trimmed() for l in self.listLabel]):
                 self.accept()
@@ -136,8 +135,8 @@ class LabelDialog(QDialog):
 class trainDialog(QDialog):
 
     def __init__(self, parent=None, listData=['a', 'c'], listPretrain=['c', 'd'],listnote=['c', 'd'], numEpoch=10):
-        super(trainDialog, self).__init__(parent)
-        title = 'choose data to start training'
+        super(trainDialog, self).__init__()
+        title = 'Setting To Start Training'
         self.setWindowTitle(title)
 
         self.listDataBox = len(listData)*['']
@@ -165,7 +164,7 @@ class trainDialog(QDialog):
         self.numEpochEdit.setValidator(QIntValidator())
         grid.addWidget(self.numEpochEdit, 3, 0)
 
-        self.prefixNameLabel = QLabel('model tag insert to folder checkpoint name')
+        self.prefixNameLabel = QLabel('Model tag insert to folder checkpoint name')
         grid.addWidget(self.prefixNameLabel, 4, 0)
         self.prefixNameEdit = QLineEdit()
         self.prefixNameEdit.setPlaceholderText('model_tag')
@@ -200,8 +199,8 @@ class trainDialog(QDialog):
 class choose_checkpoint(QDialog):
 
     def __init__(self, parent=None, listcheck=None):
-        super(choose_checkpoint, self).__init__(parent)
-        self.setWindowTitle('choose checkpoint will use')
+        super(choose_checkpoint, self).__init__()
+        self.setWindowTitle('Choose checkpoint product use')
 
         self.listCheckBox = listcheck
         grid = QGridLayout()
@@ -238,70 +237,50 @@ class choose_checkpoint(QDialog):
     def get_chose(self):
         return self.choose if self.exec_() else None
 
-class download_checkpoint(QDialog):
-
-    def __init__(self, parent=None, listcheck=None):
-        super(download_checkpoint, self).__init__(parent)
-        self.setWindowTitle('choose checkpoint want download')
-
-        self.listCheckBox = list(listcheck)
-        grid = QGridLayout()
-        self.choose = None
-        self.ButtonGroup = QButtonGroup()
-        for i, c in enumerate(self.listCheckBox):
-            self.listCheckBox[i] = QRadioButton(str(c))
-            self.ButtonGroup.addButton(self.listCheckBox[i])
-            grid.addWidget(self.listCheckBox[i], i, 0)
-
-        self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
-        bb.button(BB.Ok).setIcon(newIcon('done'))
-        bb.button(BB.Ok).setText('Choose')
-
-        bb.button(BB.Cancel).setIcon(newIcon('undo'))
-        bb.accepted.connect(self.acceptCheckpoint)
-        bb.rejected.connect(self.reject)
-        grid.addWidget(bb)
-        self.resize(self.sizeHint())
-
-        self.setLayout(grid)
-
-
-    def acceptCheckpoint(self):
-        v = self.ButtonGroup.checkedButton()
-        if v != 0:
-            self.choose = v.text()
-            print(self.choose)
-            self.accept()
-        else:
-            print("must choose")
-
-
-    def get_chose(self):
-        return self.choose if self.exec_() else None
-
-# class YouThread(QThread):
+# class download_checkpoint(QDialog):
 #
-#     def __init__(self, parent=None, waitDialog = None, num=None):
-#         QThread.__init__(self, parent)
-#         self.threadactive = True
-#         self.num = num
-#         self.waitDialog = waitDialog
+#     def __init__(self, parent=None, listcheck=None):
+#         super(download_checkpoint, self).__init__(parent)
+#         self.setWindowTitle('choose checkpoint want download')
 #
-#     def run(self):
-#         while self.threadactive:
-#             self.waitDialog.setValue(self.waitDialog.num if self.waitDialog.value() != self.waitDialog.num else (self.waitDialog.num - 1))
-#             QtTest.QTest.qWait(50)
-#         # while True :
-#         #     print(self.num)
+#         self.listCheckBox = list(listcheck)
+#         grid = QGridLayout()
+#         self.choose = None
+#         self.ButtonGroup = QButtonGroup()
+#         for i, c in enumerate(self.listCheckBox):
+#             self.listCheckBox[i] = QRadioButton(str(c))
+#             self.ButtonGroup.addButton(self.listCheckBox[i])
+#             grid.addWidget(self.listCheckBox[i], i, 0)
 #
-#     def stop(self):
-#         self.threadactive = False
-#         self.wait()
+#         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
+#         bb.button(BB.Ok).setIcon(newIcon('done'))
+#         bb.button(BB.Ok).setText('Choose')
+#
+#         bb.button(BB.Cancel).setIcon(newIcon('undo'))
+#         bb.accepted.connect(self.acceptCheckpoint)
+#         bb.rejected.connect(self.reject)
+#         grid.addWidget(bb)
+#         self.resize(self.sizeHint())
+#
+#         self.setLayout(grid)
+#
+#
+#     def acceptCheckpoint(self):
+#         v = self.ButtonGroup.checkedButton()
+#         if v != 0:
+#             self.choose = v.text()
+#             print(self.choose)
+#             self.accept()
+#         else:
+#             print("must choose")
+#
+#
+#     def get_chose(self):
+#         return self.choose if self.exec_() else None
 
-# wait for down or upload
 class waitDialog(QProgressDialog):
-    def __init__(self,title = 'waitting', txtt = 'wait untill done', num=0, parent=None, ):
-        super(waitDialog, self).__init__(parent)
+    def __init__(self,title = 'Waitting', txtt = 'Wait untill done', num=0, parent=None, ):
+        super(waitDialog, self).__init__()
         self.setWindowTitle(title)
         self.setLabelText(txtt)
         self.setSizeGripEnabled(False)
@@ -323,18 +302,10 @@ class waitDialog(QProgressDialog):
 
         self.delay(100)
 
-
-
-        # self.thread1 = YouThread(num=14, waitDialog=self)
-        # # thread1.connectNotify(s)
-        # self.thread1.start()
-
-
     def done_close(self):
         print('close')
         if self.mess is not None:
             QMessageBox.information(self, "Message", self.mess)
-        # self.thread1.stop()
         self.cancel()
 
     # can not cancel, wait until
@@ -346,16 +317,15 @@ class waitDialog(QProgressDialog):
         QtTest.QTest.qWait(s)
 
 
-
 class uploadDialog(QDialog):
 
     def __init__(self, parent=None,  name='', exists_folders = ['aa', 'ccc', 'dd', 'ee']*10):
-        super(uploadDialog, self).__init__(parent)
-        title = 'uploading'
+        super(uploadDialog, self).__init__()
+        title = 'Uploading'
         self.setWindowTitle(title)
         grid = QGridLayout()
 
-        self.exists_folders_label = QLabel('you can upload to exists folders in server')
+        self.exists_folders_label = QLabel('You can upload to exists folders in server')
         grid.addWidget(self.exists_folders_label)
 
         self.exists_folders = exists_folders
@@ -367,13 +337,15 @@ class uploadDialog(QDialog):
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         grid.addWidget(self.scrollArea)
 
-        self.nameLabel = QLabel('folder name to upload')
+        self.nameLabel = QLabel('Folder name to upload')
 
         self.nameEdit = QLineEdit()
         self.nameEdit.setPlaceholderText('folder name to upload')
         self.nameEdit.setText('{}'.format(name))
+        # self.MyInput.textChanged.connect(self.doSomething)
+        self.nameEdit.textChanged.connect(self.checkChange)
+        # self.nameEdit.changeEvent = self.changeEvent_namedit
 
-        folder_icon_path = 'resources/icons/open.png'
         for i, fname in enumerate(self.exists_folders):
             myQCustomQWidget = QCustomQWidget_3(folder_icon_path, text=fname, nameLabel=self.nameEdit)
             self.fileListWidget.addWidget(myQCustomQWidget, i//3, i%3)
@@ -395,87 +367,25 @@ class uploadDialog(QDialog):
     def get_name(self):
         return self.nameEdit.text() if self.exec_() else None
 
-# class uploadDialog(QDialog):
-#
-#     def __init__(self, parent=None, exists_folders = ['aa', 'ccc', 'dd', 'ee']*10):
-#         super(uploadDialog, self).__init__(parent)
-#         title = 'get data from server'
-#         self.setWindowTitle(title)
-#         grid = QGridLayout()
-#
-#         self.exists_folders_label = QLabel('exists data in server')
-#         grid.addWidget(self.exists_folders_label)
-#
-#
-#         self.exists_folders = exists_folders
-#         # self.fileListWidget = QGridLayout()
-#         self.scrollArea = QScrollArea(self)
-#         self.scrollArea.setWidgetResizable(True)
-#         self.scrollAreaWidgetContents = QWidget()
-#         self.fileListWidget = QGridLayout(self.scrollAreaWidgetContents)
-#         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-#         grid.addWidget(self.scrollArea)
-#
-#         self.foldername = None
-#         self.Label1 = QLabel('your choose:')
-#         self.nameLabel = QLabel('{}'.format(self.foldername))
-#
-#         folder_icon_path = 'resources/icons/open.png'
-#         for i, fname in enumerate(self.exists_folders):
-#             myQCustomQWidget = QCustomQWidget_3(folder_icon_path, text=fname, nameLabel=self.nameLabel)
-#             self.fileListWidget.addWidget(myQCustomQWidget, i//3, i%3)
-#
-#         # grid.addItem(self.fileListWidget)
-#
-#         nameLabelLayout = QHBoxLayout()
-#         nameLabelLayout.addWidget(self.Label1)
-#         nameLabelLayout.addWidget(self.nameLabel)
-#         grid.addChildLayout(nameLabelLayout)
-#
-#         self.saveDirLayout = QHBoxLayout()
-#
-#         self.saveDir =  os.getcwd()
-#         self.saveDirBtn = QPushButton('Save dir')
-#         self.saveDirBtn.clicked.connect(self.saveFileDialog)
-#         self.saveDirLayout.addWidget(self.saveDirBtn)
-#
-#         self.SaveLabel = QLabel('Save dir: {}'.format(self.saveDir))
-#         self.saveDirLayout.addWidget(self.SaveLabel)
-#         grid.addItem(self.saveDirLayout)
-#
-#         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
-#
-#         bb.accepted.connect(self.accept)
-#         bb.rejected.connect(self.reject)
-#         grid.addWidget(bb)
-#
-#         w_size = int(QFontMetrics(QFont()).width(title) * 1.6)
-#
-#         self.setMinimumWidth(w_size)
-#         self.setLayout(grid)
-#         # self.scroll.setWidget(grid)
-#
-#
-#     def saveFileDialog(self):
-#         targetDirPath = QFileDialog.getExistingDirectory(self, 'save Directory', self.saveDir,
-#                                                          QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
-#         if targetDirPath is not None and len(targetDirPath) > 1:
-#             self.saveDir = targetDirPath
-#             self.SaveLabel.setText('Save dir: {}'.format(self.saveDir))
-#         return
-#
-#     def get_name(self):
-#         return (self.nameLabel.text(), self.saveDir) if self.exec_() else (None,None)
+    def checkChange(self):
+        if self.nameEdit.text() not in self.exists_folders:
+            self.nameLabel.setStyleSheet("background-image: url(black.gif); color: rgb(255, 255, 255)")
+            self.nameLabel.setText('Folder name')
+        else:
+            self.nameLabel.setStyleSheet("background-image: url(black.gif); color: rgb(255, 0, 0)")
+            self.nameLabel.setText('{} already exist in server. Insert to this folder'.format(self.nameEdit.text()))
+
+
 
 class folderServerDialog(QDialog):
 
     def __init__(self, parent=None, data_folders = ['aa', 'ccc', 'dd', 'ee']*10):
-        super(folderServerDialog, self).__init__(parent)
-        title = 'get data from server'
+        super(folderServerDialog, self).__init__()
+        title = 'Get folder data from server'
         self.setWindowTitle(title)
         grid = QGridLayout()
 
-        self.exists_folders_label = QLabel('exists data in server')
+        self.exists_folders_label = QLabel('Exists data in server')
         grid.addWidget(self.exists_folders_label)
 
 
@@ -489,13 +399,12 @@ class folderServerDialog(QDialog):
         grid.addWidget(self.scrollArea)
 
         self.foldername = None
-        self.Label1 = QLabel('your choose:')
+        self.Label1 = QLabel('Your choose:')
         self.nameLabel = QLabel('{}'.format(self.foldername))
         self.nameLabelLayout = QHBoxLayout()
         self.nameLabelLayout.addWidget(self.Label1)
         self.nameLabelLayout.addWidget(self.nameLabel)
 
-        folder_icon_path = 'resources/icons/open.png'
         for i, fname in enumerate(self.data_folders):
             myQCustomQWidget = QCustomQWidget_3(folder_icon_path, text=fname, nameLabel=self.nameLabel)
             self.fileListWidget.addWidget(myQCustomQWidget, i//3, i%3)
@@ -525,11 +434,10 @@ class folderServerDialog(QDialog):
 
         self.setMinimumWidth(w_size)
         self.setLayout(grid)
-        # self.scroll.setWidget(grid)
 
 
     def saveFileDialog(self):
-        targetDirPath = QFileDialog.getExistingDirectory(self, 'save Directory', self.saveDir,
+        targetDirPath = QFileDialog.getExistingDirectory(self, 'Save Directory', self.saveDir,
                                                          QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
         if targetDirPath is not None and len(targetDirPath) > 1:
             self.saveDir = targetDirPath
@@ -541,9 +449,13 @@ class folderServerDialog(QDialog):
 
 class TrainStatus(QDialog):
     def __init__(self, checkpointDf=None, parent=None, training_log=None):
-        super(TrainStatus, self).__init__(parent)
+        super(TrainStatus, self).__init__()
+        title = 'Train Status'
+        self.setWindowTitle(title)
 
         self.isStop = False
+        self.parent = parent
+
         self.checkpointDf = checkpointDf
         self.tableWidget = QTableWidget()
         self.setData()
@@ -561,7 +473,6 @@ class TrainStatus(QDialog):
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
 
         bb.button(BB.Cancel).setIcon(newIcon('cancel'))
-        bb.button(BB.Cancel).setText('Stop train')
         bb.button(BB.Cancel).hide()
 
         bb.button(BB.Ok).setIcon(newIcon('done'))
@@ -572,12 +483,14 @@ class TrainStatus(QDialog):
         # Add box layout, add table to box layout and add box layout to widget
         self.layout = QGridLayout()
 
-        self.Label1 = QLabel('finish models')
+        self.Label1 = QLabel('Finished models')
+        self.Label1.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.Label1)
         self.layout.addWidget(self.tableWidget)
 
         if self.training_log is not None:
-            self.Label2 = QLabel('traning status')
+            self.Label2 = QLabel('Traning Status')
+            self.Label2.setAlignment(Qt.AlignCenter)
             self.layout.addWidget(self.Label2)
             self.layout.addWidget(self.tableWidget_log)
 
@@ -586,13 +499,13 @@ class TrainStatus(QDialog):
 
 
     def stopbtn(self):
-        # stop trainning ?????????????????
+        # stop trainning ?
         self.isStop = True
         self.accept()
         return
 
     def continueBtn(self):
-        # stop trainning ?????????????????
+        # stop trainning ?
         self.isStop = False
         self.accept()
         return
@@ -605,17 +518,17 @@ class TrainStatus(QDialog):
             status = list(self.checkpointDf['status'])[row]
             print('on_click', row, cpt_name, status)
             if status == 'finish':
-                MainWindow.train_history(cpt_name=cpt_name)
+                self.parent.train_history(cpt_name=cpt_name)
             else:
                 print('status error:',status, cpt_name)
-                MainWindow.train_history(cpt_name=cpt_name)
+                self.parent.train_history(cpt_name=cpt_name)
 
     @pyqtSlot()
     def on_click_log(self):
         for currentQTableWidgetItem in self.tableWidget_log.selectedItems():
             row = currentQTableWidgetItem.row()
             print('on_click_log', row)
-            istop = MainWindow.current_trainning_log()
+            istop = self.parent.current_trainning_log()
             if istop:
                 self.accept()
 
@@ -642,8 +555,6 @@ class TrainStatus(QDialog):
             horHeaders.append(key)
             for m, item in enumerate(self.checkpointDf[key]):
                 newitem = QTableWidgetItem(str(item))
-                # newitem.setEdit
-                # item.setFlags(Qt.ItemIsEnabled)
                 self.tableWidget.setItem(m, colIndex, newitem)
                 if key != 'note':
                     newitem.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
@@ -706,7 +617,7 @@ class TrainStatus(QDialog):
 
 class trainning_history_dialog(QDialog):
     def __init__(self, checkpointDf=None, parent=None):
-        super(trainning_history_dialog, self).__init__(parent)
+        super(trainning_history_dialog, self).__init__()
 
         self.isStop = False
         self.checkpointDf = checkpointDf
@@ -717,7 +628,6 @@ class trainning_history_dialog(QDialog):
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
 
         bb.button(BB.Cancel).setIcon(newIcon('cancel'))
-        bb.button(BB.Cancel).setText('Stop train')
         bb.button(BB.Cancel).hide()
 
         bb.button(BB.Ok).setIcon(newIcon('done'))
@@ -733,13 +643,13 @@ class trainning_history_dialog(QDialog):
 
 
     def stopbtn(self):
-        # stop trainning ?????????????????
+        # stop trainning ?
         self.isStop = True
         self.accept()
         return
 
     def continueBtn(self):
-        # stop trainning ?????????????????
+        # stop trainning ?
         self.isStop = False
         self.accept()
         return
@@ -795,7 +705,7 @@ class trainning_history_dialog(QDialog):
 
 class trainning_log_dialog(QDialog):
     def __init__(self, checkpointDf=None, parent=None, training_log=None):
-        super(trainning_log_dialog, self).__init__(parent)
+        super(trainning_log_dialog, self).__init__()
 
         self.isStop = False
 
@@ -814,7 +724,7 @@ class trainning_log_dialog(QDialog):
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
 
         bb.button(BB.Cancel).setIcon(newIcon('cancel'))
-        bb.button(BB.Cancel).setText('Stop train')
+        bb.button(BB.Cancel).setText('Stop Train')
 
         bb.button(BB.Ok).setIcon(newIcon('done'))
         bb.button(BB.Ok).setText('Ok')
@@ -828,10 +738,12 @@ class trainning_log_dialog(QDialog):
         self.layout = QGridLayout()
         if self.checkpointDf.shape[0] > 0:
             self.Label1 = QLabel('training history')
+            self.Label1.setAlignment(Qt.AlignCenter)
             self.layout.addWidget(self.Label1)
             self.layout.addWidget(self.tableWidget)
         if self.training_log is not None:
             self.Label2 = QLabel('training status')
+            self.Label2.setAlignment(Qt.AlignCenter)
             self.layout.addWidget(self.Label2)
             self.layout.addWidget(self.tableWidget_log)
         self.layout.addWidget(bb)

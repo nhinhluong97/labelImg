@@ -8,8 +8,8 @@ import pandas as pd
 
 DATA_DIR = './datasets'
 
-api_adress = 'http://54.249.71.234:5555'
-# api_adress = 'http://54.249.71.234:5050'
+# api_adress = 'http://54.249.71.234:5555'
+api_adress = 'http://54.249.71.234:5050'
 
 address_test_file = '/api/process'
 address_upload_gt_dir = '/api/upload_gtdir'
@@ -150,7 +150,7 @@ def request_all_checkpoints():
         df = pd.DataFrame(columns=('name', 'loss', 'time', 'best', 'note'))
 
     listcheck = df['name']
-    print('request_train_status done', r.status_code)
+    print('request_all_checkpoints done', r.status_code)
     return listcheck, r.status_code
 
 # this want sent list synDirs_chose to sever
@@ -165,6 +165,8 @@ def sent_checkpoint_chose(checkpoint_chose):
     data = {'chose': checkpoint_chose}
     r = requests.post(api_adress + address_checkpoint_chose, data=data)
     print('sent_checkpoint_chose done')
+    if r.status_code==400:
+        print(r.json())
     return r.status_code
 
 def down_checkpoint_chose(checkpoint_chose):

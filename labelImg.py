@@ -157,6 +157,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.labelHist = []
         self.lastOpenDir = None
 
+        self.dataSublabelpath = 'data/dataSublabel.json'
         self.dataSublabel = self.load_dataSublabels()
         self.refDir = None
         self.shapesRefs = []
@@ -182,7 +183,6 @@ class MainWindow(QMainWindow, WindowMixin):
             os.mkdir(self.data_refdir)
 
         # Main widgets and related state.
-        # self.labelDialog = LabelDialog(parent=self, label='here', subLabels=['here2', 'here3'])
         self.labelDialog = None
 
         self.itemsToShapes = {}
@@ -205,7 +205,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.editButton = QToolButton()
         self.editButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
-        self.saveFormatCBox = QCheckBox('Auto save format')
+        self.saveFormatCBox = QCheckBox('Auto Save Format')
         self.saveFormatCBox.setChecked(False)
 
         # Add some of widgets to listLayout
@@ -275,24 +275,24 @@ class MainWindow(QMainWindow, WindowMixin):
                       'Ctrl+Q', 'quit', getStr('quitApp'))
 
         upLoadBtn = action('Upload', self.upLoadBtn,
-                           'Ctrl+l', 'upload', 'completed upload to sever')
+                           'Ctrl+l', 'upload', 'Completed upload to sever')
 
-        download = action('hint', self.download,
-                      'Ctrl+x', 'download', 'download hint from sever')
+        download = action('Hint', self.download,
+                      None, 'download', 'Download hint from sever')
 
-        train = action('train', self.train,
-                       'Ctrl+t', 'train', 'choose data and train')
+        train = action('Train', self.train,
+                       None, 'train', 'Setting and train')
 
-        trainStatus = action('train status', self.trainning_status,
-                             'Ctrl+z', 'trainStatus', 'trainning status')
+        trainStatus = action('Train Status', self.trainning_status,
+                             None, 'trainStatus', 'Trainning status')
 
-        checkpoint= action('switch_checkpoint', self.choose_checkpoint,
-                      None, 'switch_checkpoint', 'choose checkpoint will use')
+        checkpoint= action('Switch Checkpoint', self.choose_checkpoint,
+                      None, 'switch_checkpoint', 'Choose checkpoint will use for product')
 
-        downloadCheckpoint= action('download checkpoint', self.download_checkpoint,
-                      None, 'download', 'choose checkpoint will download')
+        # downloadCheckpoint= action('download checkpoint', self.download_checkpoint,
+        #               None, 'download', 'choose checkpoint will download')
 
-        importServerData = action('importServerData', self.getServerData,
+        importServerData = action('Import Server Data', self.getServerData,
                          None, 'open', 'download Server Data')
 
 
@@ -329,11 +329,12 @@ class MainWindow(QMainWindow, WindowMixin):
         editMode = action('&Edit\nRectBox', self.setEditMode,
                           'e', 'edit', u'Move and edit Boxs', enabled=False)
 
-        create = action(getStr('crtBox'), self.createShape,
+        create = action('Create Rectbox', self.createShape,
                         'w', 'new', getStr('crtBoxDetail'), enabled=False)
-        delete = action(getStr('delBox'), self.deleteSelectedShape,
+
+        delete = action('Delete Rectbox', self.deleteSelectedShape,
                         'Delete', 'delete', getStr('delBoxDetail'), enabled=False)
-        copy = action(getStr('dupBox'), self.copySelectedShape,
+        copy = action('Duplicate Rectbox', self.copySelectedShape,
                       'Ctrl+D', 'copy', getStr('dupBoxDetail'),
                       enabled=False)
 
@@ -462,7 +463,8 @@ class MainWindow(QMainWindow, WindowMixin):
         addActions(self.menus.file,
                    (opendir, importServerData, changeSavedir, openAnnotation, self.menus.recentFiles, save, saveAs, close, resetAll, quit))
         addActions(self.menus.help, (help, showInfo))
-        addActions(self.menus.sever, (download, upLoadBtn, train, checkpoint, downloadCheckpoint, trainStatus))
+        addActions(self.menus.sever, (download, upLoadBtn, train, checkpoint, trainStatus))
+        # addActions(self.menus.sever, (download, upLoadBtn, train, checkpoint, downloadCheckpoint, trainStatus))
         addActions(self.menus.view, (
             self.autoSaving,
             self.singleClassMode,
@@ -483,12 +485,12 @@ class MainWindow(QMainWindow, WindowMixin):
         self.tools = self.toolbar('Tools')
         self.actions.beginner = (
             opendir, importServerData, changeSavedir, openNextImg, openPrevImg, save, download, upLoadBtn, train, trainStatus, create, None, copy, delete, None,
-            zoomIn, zoom, zoomOut, fitWindow, fitWidth, checkpoint, downloadCheckpoint)
+            zoomIn, zoom, zoomOut, fitWindow, fitWidth, checkpoint)
 
         self.actions.advanced = (
             opendir, importServerData, changeSavedir, openNextImg, openPrevImg, save, download, upLoadBtn, train, trainStatus, createMode, None,
             editMode, None,
-            hideAll, showAll, checkpoint, downloadCheckpoint)
+            hideAll, showAll, checkpoint)
 
         self.statusBar().showMessage('%s started.' % __appname__)
         self.statusBar().show()
@@ -867,13 +869,9 @@ class MainWindow(QMainWindow, WindowMixin):
                         points=[(p.x(), p.y()) for p in s.points]
                         )
 
-
         shapes = [format_shape(shape) for shape in self.canvas.shapes]
 
-        if annotationFilePath[-4:].lower() == ".xml":
-            annotationFilePath = annotationFilePath[:-4]
-            annotationFilePath += TXT_EXT
-        elif annotationFilePath[-4:].lower() != ".xml" and annotationFilePath[-4:].lower() != ".txt":
+        if annotationFilePath[-4:].lower() != ".txt":
             annotationFilePath += TXT_EXT
 
         f = open(annotationFilePath, 'w')
@@ -884,12 +882,6 @@ class MainWindow(QMainWindow, WindowMixin):
                                                                        int(data['points'][3][0]), int(data['points'][3][1]),
                                                                        data['label'], '|'.join(data['subLabels'])))
             if self.saveFormatCBox.checkState():
-                # if data['label'] == 'MODEL':
-                # print(data['label'] )
-                # print([[int(data['points'][0][0]), int(data['points'][0][1])],
-                #                                 [int(data['points'][1][0]), int(data['points'][1][1])],
-                #                                 [int(data['points'][2][0]), int(data['points'][2][1])],
-                #                                 [int(data['points'][3][0]), int(data['points'][3][1])]] )
                 self.dataSublabel[data['label']] = [data['subLabels'],
                                                     [[int(data['points'][0][0]), int(data['points'][0][1])],
                                                      [int(data['points'][1][0]), int(data['points'][1][1])],
@@ -907,7 +899,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         if item and self.canvas.editing():
             if item.childCount() == 0 and item.parent() is not None:
-                print('parent')
                 item = item.parent()
 
             self._noSelectionSlot = True
@@ -967,12 +958,12 @@ class MainWindow(QMainWindow, WindowMixin):
         for shape in self.shapesRefs:
             ps = shape['points']
             if self.check_overlap(points, ps):
-                ret_lb = shape['label']
+                ret_lb = ' '.join([ret_lb, shape['label']])
                 if ret_lb in self.dataSublabel:
                     ret_subs = self.dataSublabel[ret_lb][0]
                 else:
                     ret_subs = shape['subLabel']
-                return ret_subs, ret_lb
+                # return ret_subs, ret_lb
         return ret_subs, ret_lb
 
     def newShape(self):
@@ -1456,19 +1447,19 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def upLoadBtn(self, _value=False):
         if self.lastOpenDir is None or self.defaultSaveDir is None:
-            mess = 'prerequisite, must open a folder and choose save folder'
+            mess = 'Prerequisite, must open a folder and choose save folder'
             QMessageBox.information(self, "Message", mess)
 
             return
         elif not os.path.exists(self.lastOpenDir) or not os.path.exists(self.defaultSaveDir):
-            mess = 'prerequisite, must open a folder and choose save folder'
+            mess = 'Prerequisite, must open a folder and choose save folder'
             QMessageBox.information(self, "Message", mess)
 
             return
 
         content, status_code = dowloadAPI.request_current_synDir()
         if status_code == 400:
-            mess = 'server error'
+            mess = 'Server Error'
             # wai = labelDialog2.waitDialog(title='upload', txtt=mess, num=0)
             # wai.delay(1000)
             # wai.done_close()
@@ -1487,7 +1478,7 @@ class MainWindow(QMainWindow, WindowMixin):
             # wai = labelDialog2.waitDialog(title='uploading', txtt='wait awhile, until upload {} done\n From path: {}'.format(uploadName, self.defaultSaveDir),
             #                  num=0)
 
-            dialog = Dialog(title='download dataset', txtt='wait awhile, until upload {} done\n From path: {}'.format(uploadName, self.defaultSaveDir))
+            dialog = Dialog(title='Download dataset', txtt='Wait awhile, until upload {} done\n From path: {}'.format(uploadName, self.defaultSaveDir))
             dialog.submit(dowloadAPI.upload_gt_dir, os.path.abspath(self.lastOpenDir), os.path.abspath(self.defaultSaveDir), uploadName)
             dialog.setWindowModality(Qt.ApplicationModal)
             dialog.exec_()
@@ -1500,7 +1491,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         content, status_code = dowloadAPI.request_list_data_dir()
         if status_code != 200:
-            mess = 'server error'
+            mess = 'Server Error'
             # wai = labelDialog2.waitDialog(title='download dataset', txtt=mess, num=0)
             # wai.delay(1000)
             # wai.done_close()
@@ -1515,11 +1506,7 @@ class MainWindow(QMainWindow, WindowMixin):
         name, saveDir = upLoadWind.get_name()
         if name is not None:
             print('name:', name)
-            # wai = labelDialog2.waitDialog(title='download dataset', txtt='wait awhile, until download {} done\n save in: {}'.format(name, saveDir),
-            #                  num=0)
-            # status_code = dowloadAPI.downloadServerData(name, saveDir, self.data_refdir)
-
-            dialog = Dialog(title='download dataset', txtt='wait awhile, until download {} done\n save in: {}'.format(name, saveDir))
+            dialog = Dialog(title='Download dataset', txtt='Wait awhile, until download {} done\n save in: {}'.format(name, saveDir))
             dialog.submit(dowloadAPI.downloadServerData, name, saveDir, self.data_refdir)
             dialog.setWindowModality(Qt.ApplicationModal)
             dialog.exec_()
@@ -1528,14 +1515,7 @@ class MainWindow(QMainWindow, WindowMixin):
             if status_code == 200:
                 self.importDirImages(dirpath=os.path.join(saveDir, name), DownRef=False)
             else:
-                # mess = 'server error'
-                # dialog = Dialog(title='download dataset', txtt=mess, completed=True)
-                # dialog.setWindowModality(Qt.ApplicationModal)
-                # dialog.exec_()
                 return
-            # self.lastOpenDir , self.defaultSaveDir = os.path.join(saveDir, newName)
-            # wai.mess = 'download completed'
-            # wai.done_close()
         else:
             print('newName is', name)
             print('saveDir', saveDir)
@@ -1543,21 +1523,20 @@ class MainWindow(QMainWindow, WindowMixin):
     def download(self, _value=False):
         print('download', self.lastOpenDir)
         if self.lastOpenDir is None:
-            mess = 'prerequisite, must open a folder and choose save folder'
+            mess = 'Prerequisite, must open a folder and choose save folder'
             QMessageBox.information(self, "Message", mess)
             return
         elif not os.path.exists(self.lastOpenDir):
-            mess = 'prerequisite, must open a folder and choose save folder'
+            mess = 'Drerequisite, must open a folder and choose save folder'
             QMessageBox.information(self, "Message", mess)
             return
 
-        # wai = labelDialog2.waitDialog(txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), num=0)
         output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
         self.refDir = os.path.join(self.data_refdir, output_name)
         if not os.path.exists(self.refDir):
             os.mkdir(self.refDir)
 
-        dialog = Dialog(title='Waiting', txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir))
+        dialog = Dialog(title='Waiting', txtt='Wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir))
         dialog.submit(dowloadAPI.downloadHint, os.path.abspath(self.lastOpenDir), self.refDir)
         dialog.setWindowModality(Qt.ApplicationModal)
         dialog.exec_()
@@ -1565,16 +1544,15 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def train(self, _value=False):
         content, status_code = dowloadAPI.request_current_synDir()
-        mess = None if status_code == 200 else 'server error' if status_code == 400 else 'Training is running'
 
-        if mess is None:
+        if status_code == 200:
             (current_synDir, pretrain_list, note_list) = content
             trainWind = trainDialog(parent=self, listData=current_synDir, listPretrain=pretrain_list, listnote=note_list, numEpoch=1000)
             synDirs_chose, pretrain, numEpoch, prefixName = trainWind.get_synDir_chose()
 
             if synDirs_chose is not None:
 
-                dialog = Dialog(title='Waiting', txtt='wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), autoclose = True)
+                dialog = Dialog(title='Waiting', txtt='Wait awhile, until download done \n folder path: {}'.format(self.lastOpenDir), autoclose = True)
                 dialog.submit(dowloadAPI.sent_synDirs_chose, synDirs_chose, pretrain, numEpoch, prefixName)
                 dialog.setWindowModality(Qt.ApplicationModal)
                 dialog.exec_()
@@ -1585,31 +1563,24 @@ class MainWindow(QMainWindow, WindowMixin):
             else:
                 print('synDirs_chose is None')
         else:
-            # mess = 'server error'
+            mess = 'Server Error' if status_code == 400 else 'Training is running'
             dialog = Dialog(title='Training', txtt=mess, completed=True)
             dialog.setWindowModality(Qt.ApplicationModal)
             dialog.exec_()
-            # wai = labelDialog2.waitDialog(title='training', txtt=mess, num=0)
-            # wai.delay(1000)
-            # wai.done_close()
-
 
     def trainning_status(self, _value=False):
 
         checkpointDf, training_log, status_code = dowloadAPI.request_train_status()
 
         if status_code not in [201, 200]:
-            # wai = labelDialog2.waitDialog(title = 'trainning_status', txtt='server error', num=0)
-            # wai.delay(1000)
-            # wai.done_close()
 
-            mess = 'server error'
-            dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+            mess = 'Server Error'
+            dialog = Dialog(title='Trainning Status', txtt=mess, completed=True)
             dialog.setWindowModality(Qt.ApplicationModal)
             dialog.exec_()
             return
 
-        win_status = TrainStatus(checkpointDf=checkpointDf, training_log=training_log)
+        win_status = TrainStatus(checkpointDf=checkpointDf, training_log=training_log, parent=self)
         notes = win_status.get_note()
 
         if notes:
@@ -1618,11 +1589,8 @@ class MainWindow(QMainWindow, WindowMixin):
             if status_code == 200:
                 pass
             else:
-                mess = 'server error'
-                # wai = labelDialog2.waitDialog(title='save notes', txtt=mess, num=0)
-                # wai.delay(1000)
-                # wai.done_close()
-                dialog = Dialog(title='save notes', txtt=mess, completed=True)
+                mess = 'Server Error'
+                dialog = Dialog(title='Save Notes', txtt=mess, completed=True)
                 dialog.setWindowModality(Qt.ApplicationModal)
                 dialog.exec_()
                 return
@@ -1634,8 +1602,8 @@ class MainWindow(QMainWindow, WindowMixin):
         checkpointDf, status_code = dowloadAPI.request_trainning_history(cpt_name)
 
         if status_code not in [200]:
-            mess = 'server error'
-            dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+            mess = 'Server Error'
+            dialog = Dialog(title='Train History', txtt=mess, completed=True)
             dialog.setWindowModality(Qt.ApplicationModal)
             dialog.exec_()
             return
@@ -1644,14 +1612,13 @@ class MainWindow(QMainWindow, WindowMixin):
         notes = win_status.get_note()
 
         if notes:
-            print('notes:', notes)
             dir_path = os.path.dirname(os.path.dirname( checkpointDf['fullPath'][0])) if checkpointDf.shape[0]>0 else None
             status_code = dowloadAPI.request_save_notes(notes, dir_path=dir_path)
             if status_code == 200:
                 pass
             else:
-                mess = 'server error'
-                dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+                mess = 'Server Error'
+                dialog = Dialog(title='Save Notes', txtt=mess, completed=True)
                 dialog.setWindowModality(Qt.ApplicationModal)
                 dialog.exec_()
                 return
@@ -1663,7 +1630,7 @@ class MainWindow(QMainWindow, WindowMixin):
         checkpointDf, training_log, status_code = dowloadAPI.request_current_trainning_log()
 
         if status_code not in [200]:
-            wai = labelDialog2.waitDialog(title='trainning_log', txtt='error appeared', num=0)
+            wai = labelDialog2.waitDialog(title='Trainning Log', txtt='Error Appeared', num=0)
             wai.delay(1000)
             wai.done_close()
             return
@@ -1678,8 +1645,8 @@ class MainWindow(QMainWindow, WindowMixin):
             if status_code == 200:
                 pass
             else:
-                mess = 'server error'
-                dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+                mess = 'Server Error'
+                dialog = Dialog(title='Stop Training', txtt=mess, completed=True)
                 dialog.setWindowModality(Qt.ApplicationModal)
                 dialog.exec_()
                 return
@@ -1690,19 +1657,20 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def choose_checkpoint(self, _value=False):
         listcheck, status_code = dowloadAPI.request_all_checkpoints()
-        if status_code in [200, 201]:
-            mess = 'server error'
-            dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+        if status_code not in [200, 201]:
+            mess = 'Server Error'
+            dialog = Dialog(title='Switch Checkpoint', txtt=mess, completed=True)
             dialog.setWindowModality(Qt.ApplicationModal)
             dialog.exec_()
             return
         chooseWind = labelDialog2.choose_checkpoint(parent=self, listcheck=listcheck)
         checkpoint_chose = chooseWind.get_chose()
+
         if checkpoint_chose is not None:
             status_code = dowloadAPI.sent_checkpoint_chose(checkpoint_chose)
             if status_code != 200:
-                mess = 'server error'
-                dialog = Dialog(title='trainning_status', txtt=mess, completed=True)
+                mess = 'Server Error'
+                dialog = Dialog(title='Request Switch Checkpoint', txtt=mess, completed=True)
                 dialog.setWindowModality(Qt.ApplicationModal)
                 dialog.exec_()
                 return
@@ -1712,7 +1680,6 @@ class MainWindow(QMainWindow, WindowMixin):
     def down_save_checkpoint(self, checkpoint_chose):
 
         zip_checkpoint, filename, status_code = dowloadAPI.down_checkpoint_chose(checkpoint_chose)
-        print('status_code', status_code)
         if status_code != 200:
             return status_code
 
@@ -1725,28 +1692,28 @@ class MainWindow(QMainWindow, WindowMixin):
 
         return status_code
 
-    def download_checkpoint(self, _value=False):
-        listcheck, status_code = dowloadAPI.request_all_checkpoints()
-        if status_code not in  [200, 201]:
-            mess = 'server error'
-            dialog = Dialog(title='download_checkpoint', txtt=mess, completed=True)
-            dialog.setWindowModality(Qt.ApplicationModal)
-            dialog.exec_()
-            return
-
-        chooseWind = download_checkpoint(parent=self, listcheck=listcheck)
-        checkpoint_chose = chooseWind.get_chose()
-
-        if checkpoint_chose is not None:
-            print('synDirs_chose:', checkpoint_chose)
-
-            dialog = Dialog(title='download_checkpoint',
-                            txtt='wait awhile, until download done')
-            dialog.submit(self.down_save_checkpoint, checkpoint_chose)
-            dialog.setWindowModality(Qt.ApplicationModal)
-            dialog.exec_()
-        else:
-            print('synDirs_chose is None')
+    # def download_checkpoint(self, _value=False):
+    #     listcheck, status_code = dowloadAPI.request_all_checkpoints()
+    #     if status_code not in  [200, 201]:
+    #         mess = 'Server Error'
+    #         dialog = Dialog(title='Download Checkpoint', txtt=mess, completed=True)
+    #         dialog.setWindowModality(Qt.ApplicationModal)
+    #         dialog.exec_()
+    #         return
+    #
+    #     chooseWind = download_checkpoint(parent=self, listcheck=listcheck)
+    #     checkpoint_chose = chooseWind.get_chose()
+    #
+    #     if checkpoint_chose is not None:
+    #         print('synDirs_chose:', checkpoint_chose)
+    #
+    #         dialog = Dialog(title='Download Checkpoint',
+    #                         txtt='Wait awhile, until download done')
+    #         dialog.submit(self.down_save_checkpoint, checkpoint_chose)
+    #         dialog.setWindowModality(Qt.ApplicationModal)
+    #         dialog.exec_()
+    #     else:
+    #         print('synDirs_chose is None')
 
     def saveCheckpointDialog(self, zip_file_name):
         caption = '%s - Choose path' % __appname__
@@ -1775,7 +1742,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self._saveFile(savedPath)
 
     def saveFileAs(self, _value=False):
-        assert not self.image.isNull(), "cannot save empty image"
+        assert not self.image.isNull(), "Cannot save empty image"
         savedPath = self.saveFileDialog(removeExt=True)
         self.defaultSaveDir = os.path.dirname(savedPath)
         self._saveFile(savedPath)
@@ -1822,12 +1789,20 @@ class MainWindow(QMainWindow, WindowMixin):
         proc.startDetached(os.path.abspath(__file__))
 
     def mayContinue(self):
+        if self.dirty:
+            save = self.discardChangesDialog()
+            if save:
+                self.saveFile()
+
+        return True
+
+    def mayContinue_org(self):
         return not (self.dirty and not self.discardChangesDialog())
 
     def discardChangesDialog(self):
-        yes, no = QMessageBox.Yes, QMessageBox.No
-        msg = u'You have unsaved changes, proceed anyway?'
-        return yes == QMessageBox.warning(self, u'Attention', msg, yes | no)
+        no, save = QMessageBox.No, QMessageBox.Save,
+        msg = u'You have unsaved changes, save or no'
+        return save == QMessageBox.warning(self, u'Attention', msg, no|save , no)
 
     def errorMessage(self, title, message):
         return QMessageBox.critical(self, title,
@@ -1931,13 +1906,13 @@ class MainWindow(QMainWindow, WindowMixin):
         h_max = max(yi4 - yi1, yj4 - yj1)
         h_min = min(yi4 - yi1, yj4 - yj1)
         overlap_h = min(yi4, yj4) - max(yi1, yj1)
-        if overlap_h >= h_min * 0.8 and overlap_h >= h_max * 0.5:
+        if overlap_h >= h_min * 0.8  and overlap_h >= h_max * 0.5:
             merge_h = True
 
         v_max = max(xi3 - xi1, xj3 - xj1)
         v_min = min(xi3 - xi1, xj3 - xj1)
         overlap_v = min(xi3, xj3) - max(xi1, xj1)
-        if overlap_v >= v_min * 0.8 and overlap_v >= v_max * 0.5:
+        if overlap_v >= v_min * 0.8: # and overlap_v >= v_max * 0.5:
             merge_v = True
         return merge_v and merge_h
 
@@ -2024,7 +1999,7 @@ class MainWindow(QMainWindow, WindowMixin):
         import json
         import os
         refDict = {}
-        fn = os.path.join(os.getcwd(), 'data/dataSublabel.json')
+        fn = os.path.join(os.getcwd(), self.dataSublabelpath)
         if os.path.isfile(fn):
             with open(fn, 'r') as jsonr:
                 refDict = json.load(jsonr)
@@ -2035,7 +2010,7 @@ class MainWindow(QMainWindow, WindowMixin):
         import json
         import os
 
-        fn = os.path.join(os.path.abspath(os.getcwd()), 'data/dataSublabel.json')
+        fn = os.path.join(os.path.abspath(os.getcwd()), self.dataSublabelpath)
         with open(fn, 'w') as jsonw:
             json.dump(self.dataSublabel, jsonw, ensure_ascii=False, indent=4)
 
