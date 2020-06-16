@@ -449,7 +449,7 @@ class Canvas(QWidget):
             shape.moveVertexBy(lindex, lshift)
 
         if self.__isAltPressed:
-            # hori
+            # vert
             if index % 2 == 0:
                 lindex = (index + 1) % 4
                 lshift = shiftPos
@@ -459,7 +459,7 @@ class Canvas(QWidget):
                 rshift = shiftPos
                 shape.moveVertexBy(rindex, rshift)
         if self.__isCrtlPressed:
-            # vert
+            # hori
             if index % 2 == 0:
                 rindex = (index + 3) % 4
                 rshift = shiftPos
