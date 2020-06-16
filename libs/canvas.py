@@ -449,13 +449,25 @@ class Canvas(QWidget):
             shape.moveVertexBy(lindex, lshift)
 
         if self.__isAltPressed:
-            lindex = (index + 1) % 4
-            lshift = shiftPos
-            shape.moveVertexBy(lindex, lshift)
+            # hori
+            if index % 2 == 0:
+                lindex = (index + 1) % 4
+                lshift = shiftPos
+                shape.moveVertexBy(lindex, lshift)
+            else:
+                rindex = (index + 3) % 4
+                rshift = shiftPos
+                shape.moveVertexBy(rindex, rshift)
         if self.__isCrtlPressed:
-            rindex = (index + 3) % 4
-            rshift = shiftPos
-            shape.moveVertexBy(rindex, rshift)
+            # vert
+            if index % 2 == 0:
+                rindex = (index + 3) % 4
+                rshift = shiftPos
+                shape.moveVertexBy(rindex, rshift)
+            else:
+                lindex = (index + 1) % 4
+                lshift = shiftPos
+                shape.moveVertexBy(lindex, lshift)
 
     def boundedMoveShape(self, shape, pos):
         if self.outOfPixmap(pos):
