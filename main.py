@@ -1338,6 +1338,8 @@ class MainWindow(QMainWindow, WindowMixin):
             self.imageData = read(unicodeFilePath, None)
             self.canvas.verified = False
             img = cv2.imread(unicodeFilePath)
+            print(img.shape)
+
             image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
             height, width, byteValue = image.shape
