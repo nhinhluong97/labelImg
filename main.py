@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# from fbs_runtime.application_context.PyQt5 import ApplicationContext
+from fbs_runtime.application_context.PyQt5 import ApplicationContext
 import codecs
 import os.path
 import platform
@@ -41,6 +41,7 @@ from libs.labelDialog2 import *
 from libs import labelDialog2
 from libs.custom_widget import QCustomQWidget
 import dowloadAPI
+import cv2
 from libs.WaitingSpinnerWidget import WaitingSpinner
 # from libs.treeLabelWidget import TreeLabel
 
@@ -1108,7 +1109,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.canvas.callUpdate()
             self.setDirty()
         elif len(items)==1:
-            print('len(items) == 1')
+            # print('len(items) == 1')
             self.clearSelect()
             item = items[0]
             if item and self.canvas.editing():
@@ -1336,8 +1337,20 @@ class MainWindow(QMainWindow, WindowMixin):
             # read data first and store for saving into label file.
             self.imageData = read(unicodeFilePath, None)
             self.canvas.verified = False
+            img = cv2.imread(unicodeFilePath)
+            image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-            image = QImage.fromData(self.imageData)
+            height, width, byteValue = image.shape
+            byteValue = byteValue * width
+
+            image = QImage(image, width, height, byteValue, QImage.Format_RGB888)
+            # image = QImage(img.data, img.shape[1], img.shape[0], QImage.Format_RGB888)
+            # pixmap01 = QtGui.QPixmap.fromImage(qimg)
+            # self.image01TopTxt = QtGui.QLabel('window', self)
+            # self.imageLable01 = QtGui.QLabel(self)
+            # self.imageLable01.setPixmap(pixmap01)
+            # image = QImage.fromData(self.imageData)
+            print(image.size())
             if image.isNull():
                 self.errorMessage(u'Error opening file',
                                   u"<p>Make sure <i>%s</i> is a valid image file." % unicodeFilePath)
@@ -1347,6 +1360,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.image = image
             self.filePath = unicodeFilePath
             self.canvas.loadPixmap(QPixmap.fromImage(image))
+            # self.canvas.loadPixmap(QPixmap(unicodeFilePath))
             self.setClean()
             self.canvas.setEnabled(True)
             self.adjustScale(initial=True)
@@ -2433,8 +2447,8 @@ def read(filename, default=None):
 
 if __name__ == '__main__':
     argv = sys.argv
-    # appctxt  = ApplicationContext()
-    # app = appctxt.app
+    appctxt  = ApplicationContext()
+    app = appctxt.app
     app = QApplication(argv)
     styles.dark(app)
     app.setApplicationName(__appname__)
