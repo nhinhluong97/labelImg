@@ -790,8 +790,8 @@ class TrainStatus(QDialog):
             self.tableWidget_log = QTableWidget()
             self.setData_log()
             self.tableWidget_log.resize(self.tableWidget_log.sizeHint())
-            self.tableWidget_log.doubleClicked.connect(self.on_click_log)
-
+            if 'Error' not in self.training_log:
+                self.tableWidget_log.doubleClicked.connect(self.on_click_log)
 
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
 

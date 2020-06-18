@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from fbs_runtime.application_context.PyQt5 import ApplicationContext
+# from fbs_runtime.application_context.PyQt5 import ApplicationContext
 import codecs
 import os.path
 import platform
@@ -1996,8 +1996,7 @@ class MainWindow(QMainWindow, WindowMixin):
         else:
             print('notes is None:', notes)
 
-    @staticmethod
-    def current_trainning_log():
+    def current_trainning_log(self):
         checkpointDf, training_log, status_code = dowloadAPI.request_current_trainning_log()
 
         if status_code not in [200]:
@@ -2011,19 +2010,25 @@ class MainWindow(QMainWindow, WindowMixin):
         isStop = win_status.chose_stop()
 
         if isStop:
-            print('chose stop training:', isStop)
-            status_code = dowloadAPI.request_stop_training()
-            if status_code == 200:
-                pass
-            else:
-                mess = 'Server Error'
-                dialog = Dialog(title='Stop Training', txtt=mess, completed=True)
-                dialog.setWindowModality(Qt.ApplicationModal)
-                dialog.exec_()
-                return
+            if self.confirmStopDialog():
+                print('chose stop training:', isStop)
+                status_code = dowloadAPI.request_stop_training()
+                if status_code == 200:
+                    pass
+                else:
+                    mess = 'Server Error'
+                    dialog = Dialog(title='Stop Training', txtt=mess, completed=True)
+                    dialog.setWindowModality(Qt.ApplicationModal)
+                    dialog.exec_()
+                    return
         else:
             print('chose continue training:', isStop)
         return isStop
+
+    def confirmStopDialog(self):
+        no, yes = QMessageBox.No, QMessageBox.Yes
+        msg = u'Do you sure stop training?'
+        return yes == QMessageBox.warning(self, u'Attention', msg, no|yes, no)
 
 
     def choose_checkpoint(self, _value=False):
@@ -2378,7 +2383,6 @@ class MainWindow(QMainWindow, WindowMixin):
     def beginFromRef(self, baseName):
         # print('beginFromRef')
         if os.path.isfile(os.path.join(self.refDir,'{}.txt'.format(baseName))):
-            print()
             if self.shapesRefs:
                 self.hint_shapes_from_shapesRefs(self.shapesRefs)
                 self.canvas.verified = False
@@ -2449,8 +2453,8 @@ def read(filename, default=None):
 
 if __name__ == '__main__':
     argv = sys.argv
-    appctxt  = ApplicationContext()
-    app = appctxt.app
+    # appctxt  = ApplicationContext()
+    # app = appctxt.app
     app = QApplication(argv)
     styles.dark(app)
     app.setApplicationName(__appname__)
