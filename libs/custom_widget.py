@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
+import cv2
+import numpy as np
+from shutil import copyfile
 
 try:
     from PyQt5.QtGui import *
@@ -15,7 +18,7 @@ except ImportError:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
 
-
+from libs.utils import newIcon
 class QHLine(QFrame):
     def __init__(self):
         super(QHLine, self).__init__()
@@ -26,11 +29,17 @@ class QCustomQWidget(QWidget):
     def __init__(self, imagePath, parent=None):
         super(QCustomQWidget, self).__init__(parent)
         self.imagePath = imagePath
+        self.parent = parent
         self.textUpQLabel = QLabel()
         self.allQHBoxLayout = QHBoxLayout()
         self.iconQLabel = QLabel()
         self.allQHBoxLayout.addWidget(self.iconQLabel)
         self.allQHBoxLayout.addWidget(self.textUpQLabel)
+
+        self.btn = QPushButton('')
+        self.btn.setIcon(newIcon('rotate90_2'))
+        self.btn.clicked.connect(self.rotate90)        
+        self.allQHBoxLayout.addWidget(self.btn)
 
         self.CBox = QCheckBox()
         self.CBox.setChecked(False)
@@ -54,11 +63,25 @@ class QCustomQWidget(QWidget):
         self.textUpQLabel.setStyleSheet('''
             color: rgb(255, 255, 255);
         ''')
-        # pxmap = QPixmap(imagePath)
-        self.iconQLabel.setPixmap(QPixmap(imagePath).scaledToWidth(64))
+        # # pxmap = QPixmap(imagePath)
+        self.imageData = self.read(self.imagePath, None)
+        # img = cv2.imdecode(np.fromstring(self.imageData, np.uint8), cv2.IMREAD_COLOR)
+        img = cv2.imdecode(np.fromstring(self.imageData, np.uint8), cv2.IMREAD_COLOR)
+        if img is not None:
+            image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            height, width, byteValue = image.shape
+            byteValue = byteValue * width
+
+            image = QImage(image, width, height, byteValue, QImage.Format_RGB888)
+
+            self.iconQLabel.setPixmap(QPixmap.fromImage(image).scaledToWidth(64))
+        # self.iconQLabel.setPixmap(QPixmap(imagePath).scaledToWidth(64))
         # self.iconQLabel.setMaximumWidth(50)
         # self.iconQLabel.setMaximumHeight(50)
         self.textUpQLabel.setText(os.path.basename(imagePath))
+
+
 
     def getPath(self):
         return self.imagePath
@@ -73,6 +96,44 @@ class QCustomQWidget(QWidget):
     def deselect(self):
         self.textUpQLabel.setStyleSheet("background-color: none; color: white;")
         self.iconQLabel.setStyleSheet("color: red")
+
+
+    def read(self, filename, default=None):
+        try:
+            with open(filename, 'rb') as f:
+                return f.read()
+        except:
+            return default
+
+    def rotate90(self):
+
+        # reload img
+        self.imageData = self.read(self.imagePath, None)
+        # img = cv2.imdecode(np.fromstring(self.imageData, np.uint8), cv2.IMREAD_COLOR)
+        img = cv2.imdecode(np.fromstring(self.imageData, np.uint8), cv2.IMREAD_COLOR)
+        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+        s = 'save.jpg'
+        s = os.path.abspath(s)
+        # print(s)
+        cv2.imwrite(s, img) # windows-1252
+        
+        copyfile(s, self.imagePath)
+        # cv2.imwrite(s.encode('utf-8'), img) # windows-1252
+
+        if self.imagePath == self.parent.filePath:
+            self.parent.loadFile(self.parent.filePath)
+
+        if img is not None:
+            image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            height, width, byteValue = image.shape
+            byteValue = byteValue * width
+
+            image = QImage(image, width, height, byteValue, QImage.Format_RGB888)
+
+            self.iconQLabel.setPixmap(QPixmap.fromImage(image).scaledToWidth(64))
+
+
 
 class QCustomQWidget_2(QWidget):
     def __init__(self, imagePath, text=None,):

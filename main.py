@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# from fbs_runtime.application_context.PyQt5 import ApplicationContext
+from fbs_runtime.application_context.PyQt5 import ApplicationContext
 import codecs
 import os.path
 import platform
@@ -1333,11 +1333,14 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.mImgList.clear()
 
         if unicodeFilePath and os.path.exists(unicodeFilePath):
+            import numpy as np
             # Load image:
             # read data first and store for saving into label file.
             self.imageData = read(unicodeFilePath, None)
             self.canvas.verified = False
-            img = cv2.imread(unicodeFilePath)
+            # img = cv2.imread(unicodeFilePath)
+            # img = cv2.imread(unicodeFilePath.encode('utf-8', 'surrogateescape').decode('utf-8', 'surrogateescape'))
+            img = cv2.imdecode(np.fromstring(self.imageData, np.uint8), cv2.IMREAD_COLOR)
             print(img.shape)
 
             image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -1346,11 +1349,11 @@ class MainWindow(QMainWindow, WindowMixin):
             byteValue = byteValue * width
 
             image = QImage(image, width, height, byteValue, QImage.Format_RGB888)
-            # image = QImage(img.data, img.shape[1], img.shape[0], QImage.Format_RGB888)
-            # pixmap01 = QtGui.QPixmap.fromImage(qimg)
-            # self.image01TopTxt = QtGui.QLabel('window', self)
-            # self.imageLable01 = QtGui.QLabel(self)
-            # self.imageLable01.setPixmap(pixmap01)
+            # # image = QImage(img.data, img.shape[1], img.shape[0], QImage.Format_RGB888)
+            # # pixmap01 = QtGui.QPixmap.fromImage(qimg)
+            # # self.image01TopTxt = QtGui.QLabel('window', self)
+            # # self.imageLable01 = QtGui.QLabel(self)
+            # # self.imageLable01.setPixmap(pixmap01)
             # image = QImage.fromData(self.imageData)
             print(image.size())
             if image.isNull():
@@ -1639,7 +1642,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.dirty = False
 
         for imgPath in self.mImgList:
-            myQCustomQWidget = QCustomQWidget(imgPath)
+            myQCustomQWidget = QCustomQWidget(imgPath, parent=self)
             item = QListWidgetItem()
             item.setSizeHint(myQCustomQWidget.sizeHint())
             self.fileListWidget.addItem(item)
@@ -1850,7 +1853,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.fileListWidget.clear()
         self.mImgList = self.scanAllImages(self.lastOpenDir)
         for imgPath in self.mImgList:
-            myQCustomQWidget = QCustomQWidget(imgPath)
+            myQCustomQWidget = QCustomQWidget(imgPath, parent=self)
             item = QListWidgetItem()
             item.setSizeHint(myQCustomQWidget.sizeHint())
             self.fileListWidget.addItem(item)
@@ -2453,9 +2456,9 @@ def read(filename, default=None):
 
 if __name__ == '__main__':
     argv = sys.argv
-    # appctxt  = ApplicationContext()
-    # app = appctxt.app
-    app = QApplication(argv)
+    appctxt  = ApplicationContext()
+    app = appctxt.app
+    # app = QApplication(argv)
     styles.dark(app)
     app.setApplicationName(__appname__)
     app.setWindowIcon(newIcon("app"))
