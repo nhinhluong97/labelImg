@@ -105,7 +105,8 @@ class Shape(object):
             #self.drawVertex(vrtx_path, 0)
 
             for i, p in enumerate(self.points):
-                line_path.lineTo(p)
+                if self.reachMaxPoints():
+                    line_path.lineTo(p)
                 self.drawVertex(vrtx_path, i)
             if self.isClosed():
                 line_path.lineTo(self.points[0])
@@ -123,7 +124,9 @@ class Shape(object):
                     min_y = min(min_y, point.y())
                 if min_x != sys.maxsize and min_y != sys.maxsize:
                     font = QFont()
-                    font.setPointSize(8)
+
+                    size = (self.points[3].y() - self.points[0].y())*0.5
+                    font.setPointSize(size)
                     font.setBold(True)
                     painter.setFont(font)
                     if(self.label == None):
@@ -135,6 +138,8 @@ class Shape(object):
 
             if self.fill:
                 color = self.select_fill_color if self.selected else self.fill_color
+                # print(color)
+                # print(color.name())
                 painter.fillPath(line_path, color)
 
     def paintForEdit(self, painter):
@@ -178,7 +183,8 @@ class Shape(object):
                     min_y = min(min_y, point.y())
                 if min_x != sys.maxsize and min_y != sys.maxsize:
                     font = QFont()
-                    font.setPointSize(8)
+                    size = (self.points[3].y() - self.points[0].y())*0.5
+                    font.setPointSize(size)
                     font.setBold(True)
                     painter.setFont(font)
                     if(self.label == None):

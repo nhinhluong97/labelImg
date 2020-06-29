@@ -49,7 +49,7 @@ class Canvas(QWidget):
         self.current = None
         self.selectedShape = None  # save the selected shape here
         self.selectedShapeCopy = None
-        self.drawingLineColor = QColor(0, 0, 255)
+        self.drawingLineColor =  QColor(255, 0, 0) # QColor(0, 0, 255)
         self.drawingRectColor = QColor(0, 0, 255)
         self.line = Shape(line_color=self.drawingLineColor)
         self.prevPoint = QPointF()
@@ -125,7 +125,8 @@ class Canvas(QWidget):
 
         # Polygon drawing.
         if self.drawing():
-            self.overrideCursor(CURSOR_DRAW)
+            # self.overrideCursor(CURSOR_DRAW)
+            # self.overrideCursor(CURSOR_DRAW)
             if self.current:
                 color = self.drawingLineColor
                 if self.outOfPixmap(pos):
@@ -502,10 +503,14 @@ class Canvas(QWidget):
     def deleteSelected(self):
         if self.selectedShape:
             shape = self.selectedShape
-            self.shapes.remove(self.selectedShape)
-            self.selectedShape = None
-            self.update()
-            return shape
+            if shape in self.shapes:
+                self.shapes.remove(self.selectedShape)
+                self.selectedShape = None
+                self.update()
+                return shape
+            else:
+                print('shape not in self.shapes:')
+                return shape
 
     def callUpdate(self):
         self.update()
@@ -568,6 +573,7 @@ class Canvas(QWidget):
                 else:
                     shape.paint(p)
         if self.current:
+            pass
             self.current.paint(p)
             self.line.paint(p)
         if self.selectedShapeCopy:
@@ -579,8 +585,10 @@ class Canvas(QWidget):
             rightBottom = self.line[1]
             rectWidth = rightBottom.x() - leftTop.x()
             rectHeight = rightBottom.y() - leftTop.y()
-            p.setPen(self.drawingRectColor)
-            brush = QBrush(Qt.BDiagPattern)
+            p.setPen(QColor(200, 0, 0))
+            # p.setPen(self.drawingRectColor)
+            brush = QColor(0, 0, 0, 0)
+            # brush = QBrush(Qt.BDiagPattern) # orig
             p.setBrush(brush)
             p.drawRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
 

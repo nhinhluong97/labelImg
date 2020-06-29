@@ -32,6 +32,7 @@ class QCustomQWidget(QWidget):
         self.parent = parent
         self.textUpQLabel = QLabel()
         self.allQHBoxLayout = QHBoxLayout()
+        # self.iconQLabel = None
         self.iconQLabel = QLabel()
         self.allQHBoxLayout.addWidget(self.iconQLabel)
         self.allQHBoxLayout.addWidget(self.textUpQLabel)
@@ -64,6 +65,7 @@ class QCustomQWidget(QWidget):
             color: rgb(255, 255, 255);
         ''')
         # # pxmap = QPixmap(imagePath)
+
         self.imageData = self.read(self.imagePath, None)
         # img = cv2.imdecode(np.fromstring(self.imageData, np.uint8), cv2.IMREAD_COLOR)
         img = cv2.imdecode(np.fromstring(self.imageData, np.uint8), cv2.IMREAD_COLOR)
@@ -76,9 +78,7 @@ class QCustomQWidget(QWidget):
             image = QImage(image, width, height, byteValue, QImage.Format_RGB888)
 
             self.iconQLabel.setPixmap(QPixmap.fromImage(image).scaledToWidth(64))
-        # self.iconQLabel.setPixmap(QPixmap(imagePath).scaledToWidth(64))
-        # self.iconQLabel.setMaximumWidth(50)
-        # self.iconQLabel.setMaximumHeight(50)
+
         self.textUpQLabel.setText(os.path.basename(imagePath))
 
 
@@ -123,7 +123,7 @@ class QCustomQWidget(QWidget):
         if self.imagePath == self.parent.filePath:
             self.parent.loadFile(self.parent.filePath)
 
-        if img is not None:
+        if img is not None and self.iconQLabel is not None:
             image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
             height, width, byteValue = image.shape

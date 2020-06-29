@@ -284,6 +284,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.dock = QDockWidget(getStr('boxLabelText'), self)
         self.dock.setObjectName(getStr('labels'))
+
         self.dock.setWidget(labelListContainer)
 
         self.fileListWidget = QListWidget()
@@ -951,7 +952,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self._noSelectionSlot = False
         else:
             shape = self.canvas.selectedShape
-            if shape:
+            if shape and shape in self.shapesToItems :
                 self.shapesToItems[shape].setSelected(True)
                 self.scroll(self.shapesToItems[shape])
             else:
@@ -964,6 +965,8 @@ class MainWindow(QMainWindow, WindowMixin):
         self.actions.shapeFillColor.setEnabled(selected)
 
     def addLabel(self, shape):
+        if shape is None:
+            return
         # print('addLabel')
         shape.paintLabel = self.displayLabelOption.isChecked()
         item = HashableQTreeWidgetItem(self.labelList)  # HashableQListWidgetItem(shape.label)
@@ -986,10 +989,17 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def remLabel(self, shape):
         if shape is None:
+            print('shape is None')
             return
         item = self.shapesToItems[shape]
-        self.labelList.takeTopLevelItem(self.labelList.indexOfTopLevelItem(item))
-        self.canvas.selectedShape = None
+        indexOfTopLevelItem = self.labelList.indexOfTopLevelItem(item)
+        self.labelList.takeTopLevelItem(indexOfTopLevelItem)
+        if self.labelList.topLevelItemCount() > indexOfTopLevelItem:
+            self.labelList.setCurrentItem(self.labelList.topLevelItem(indexOfTopLevelItem))
+        elif self.labelList.topLevelItemCount():
+            self.labelList.setCurrentItem(self.labelList.topLevelItem(self.labelList.topLevelItemCount() - 1))
+        # self.canvas.selectedShape = None
+        # self.canvas.callUpdate()
         del self.shapesToItems[shape]
         del self.itemsToShapes[item]
 
@@ -1085,15 +1095,16 @@ class MainWindow(QMainWindow, WindowMixin):
     def zoomInLabelList(self):
 
         # initSize = self.labelList.font().pointSizeF()
-        self.labelListTextSize -= 5
+        if self.labelListTextSize - 5 > 0:
+            self.labelListTextSize -= 5
+        print(self.labelListTextSize )
         self.labelList.setFont(QFont('SansSerif', self.labelListTextSize))
 
     def labelSelectionChanged(self):
         items = self.labelList.selectedItems()
 
-
         if len(items) > 1:
-            print('len(items) > 1')
+            # print('len(items) > 1')
             self.clearSelect()
             if self.canvas.selectedShape:
                 self.canvas.selectedShape.selected = False
@@ -1121,9 +1132,7 @@ class MainWindow(QMainWindow, WindowMixin):
             # self.canvas.callUpdate()
             # self.setDirty()
 
-
     def labelItemChanged(self, item):
-
         try:
             shape = self.itemsToShapes[item]
         except:
@@ -1328,6 +1337,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 index = self.mImgList.index(unicodeFilePath)
                 fileWidgetItem = self.fileListWidget.item(index)
                 fileWidgetItem.setSelected(True)
+                self.filedock.setWindowTitle('Current: {}/{}'.format(index+1, len(self.fileListWidget)))
             else:
                 self.fileListWidget.clear()
                 self.mImgList.clear()
@@ -1622,8 +1632,8 @@ class MainWindow(QMainWindow, WindowMixin):
 
         output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
         self.refDir = os.path.join(self.data_refdir, output_name)
-        if DownRef and not self.isExistsRefDir() :
-            self.download()
+        # if DownRef and not self.isExistsRefDir():
+        #     self.download()
 
         self.dirname = dirpath
 
@@ -2227,6 +2237,8 @@ class MainWindow(QMainWindow, WindowMixin):
             self.setDirty()
 
     def deleteSelectedShape(self):
+        print('deleteSelectedShape')
+        print('self.selectedShape:', self.canvas.selectedShape)
         self.remLabel(self.canvas.deleteSelected())
         self.setDirty()
         if self.noShapes():
