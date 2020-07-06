@@ -1634,8 +1634,8 @@ class MainWindow(QMainWindow, WindowMixin):
 
         output_name = os.path.basename(os.path.abspath(self.lastOpenDir))
         self.refDir = os.path.join(self.data_refdir, output_name)
-        # if DownRef and not self.isExistsRefDir():
-        #     self.download()
+        if DownRef and not self.isExistsRefDir():
+            self.download()
 
         self.dirname = dirpath
 
