@@ -1336,6 +1336,8 @@ class MainWindow(QMainWindow, WindowMixin):
             if unicodeFilePath in self.mImgList:
                 index = self.mImgList.index(unicodeFilePath)
                 fileWidgetItem = self.fileListWidget.item(index)
+                self.fileListWidget.scrollToItem(fileWidgetItem)
+                # self.labelList.scrollToItem(item, QAbstractItemView.PositionAtTop)
                 fileWidgetItem.setSelected(True)
                 self.filedock.setWindowTitle('Current: {}/{}'.format(index+1, len(self.fileListWidget)))
             else:
@@ -2237,8 +2239,8 @@ class MainWindow(QMainWindow, WindowMixin):
             self.setDirty()
 
     def deleteSelectedShape(self):
-        print('deleteSelectedShape')
-        print('self.selectedShape:', self.canvas.selectedShape)
+        # print('deleteSelectedShape')
+        # print('self.selectedShape:', self.canvas.selectedShape)
         self.remLabel(self.canvas.deleteSelected())
         self.setDirty()
         if self.noShapes():
@@ -2470,7 +2472,7 @@ if __name__ == '__main__':
     argv = sys.argv
     appctxt  = ApplicationContext()
     app = appctxt.app
-    # app = QApplication(argv)
+    app = QApplication(argv)
     styles.dark(app)
     app.setApplicationName(__appname__)
     app.setWindowIcon(newIcon("app"))

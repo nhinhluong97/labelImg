@@ -11,6 +11,7 @@ except ImportError:
 
 from libs.shape import Shape
 from libs.utils import distance
+import math
 
 CURSOR_DEFAULT = Qt.ArrowCursor
 CURSOR_POINT = Qt.PointingHandCursor
@@ -73,6 +74,7 @@ class Canvas(QWidget):
         self.__isShiftPressed = False
         self.__isAltPressed = False
         self.__isCrtlPressed = False
+        self.__isRotatePressed = False
 
     def setDrawingColor(self, qColor):
         self.drawingLineColor = qColor
@@ -258,6 +260,7 @@ class Canvas(QWidget):
                 self.handleDrawing(pos)
             else:
                 self.selectShapePoint(pos)
+                self.selectShapePoint(pos)
                 self.prevPoint = pos
                 self.repaint()
         elif ev.button() == Qt.RightButton and self.editing():
@@ -415,6 +418,35 @@ class Canvas(QWidget):
 
         return x, y, False
 
+    # def cal_angle(self, v1, v2):
+    #     v1_theta = math.atan2(v1.y(), v1.x())
+    #     v2_theta = math.atan2(v2.y(), v2.x())
+    #     print(v1_theta* (180.0 / math.pi), v2_theta* (180.0 / math.pi))
+    #     r = (v2_theta - v1_theta) * (180.0 / math.pi)
+    #     return r
+
+    def cal_angle(self, v1, v2, left):
+
+        def dotproduct(v1, v2):
+            return v1.x() * v2.x() + v1.y()*v2.y()
+            # return sum((a * b) for a, b in zip(v1, v2))
+
+        def length(v):
+            return math.sqrt(dotproduct(v, v))
+        def sign(v1,v2):
+            if left:
+                return 1 if (v2.y()-v1.y()) > 0 else -1
+            else:
+                return 1 if (v2.y()-v1.y()) < 0 else -1
+
+
+        def determinant(v, w):
+            return v.x() * w.y() - v.y() * w.x() < 0
+        print('cos:',dotproduct(v1, v2) / (length(v1) * length(v2)), sign(v1,v2))
+        if dotproduct(v1, v2) / (length(v1) * length(v2)) >= 1:
+            return 0
+        return math.acos(dotproduct(v1, v2) / (length(v1) * length(v2)))*sign(v1,v2)
+
     def boundedMoveVertex(self, pos):
         index, shape = self.hVertex, self.hShape
         point = shape[index]
@@ -432,6 +464,54 @@ class Canvas(QWidget):
         else:
             shiftPos = pos - point
 
+
+        if self.__isRotatePressed:
+            lindex = (index + 1) % 4
+            rindex = (index + 3) % 4
+            opposite_point_index = (index + 2) % 4
+            d_old_v = shape.points[opposite_point_index] - shape.points[index]
+            # d = distance(shape.points[index] - shape.points[opposite_point_index])
+            # shape.moveVertexBy(index, shiftPos)
+            # new_d = distance(shape.points[index] - shape.points[opposite_point_index])
+            d_new_v = shape.points[opposite_point_index] - pos
+
+            # hori
+            lef = shape.points[opposite_point_index].x() < shape.points[index].x()
+            print('lef:', lef, index)
+            angle = self.cal_angle(d_old_v, d_new_v, lef)
+            print('angle:', angle)
+            # if index == 0 or index == 3:
+            #     print(' index == 0 or index == 3')
+            #     angle=-angle
+
+            y2 = (shape.points[index].y() - shape.points[opposite_point_index].y()) * math.cos(angle) - (
+                        shape.points[index].x() - shape.points[opposite_point_index].x()) * math.sin(angle)
+            y2 = y2 + shape.points[opposite_point_index].y()
+            x2 = (shape.points[index].y() - shape.points[opposite_point_index].y()) * math.sin(angle) + (
+                        shape.points[index].x() - shape.points[opposite_point_index].x()) * math.cos(angle)
+            x2 = x2 + shape.points[opposite_point_index].x()
+            shape.points[index] = QPointF(x2, y2)
+
+            rindex = (index + 3) % 4
+            y2 = (shape.points[rindex].y() - shape.points[opposite_point_index].y()) * math.cos(angle) - (
+                        shape.points[rindex].x() - shape.points[opposite_point_index].x()) * math.sin(angle)
+            y2 = y2 + shape.points[opposite_point_index].y()
+            x2 = (shape.points[rindex].y() - shape.points[opposite_point_index].y()) * math.sin(angle) + (
+                        shape.points[rindex].x() - shape.points[opposite_point_index].x()) * math.cos(angle)
+            x2 = x2 + shape.points[opposite_point_index].x()
+
+            shape.points[rindex] = QPointF(x2, y2)
+
+            lindex = (index + 1) % 4
+            y2 = (shape.points[lindex].y() - shape.points[opposite_point_index].y()) * math.cos(angle) - (
+                        shape.points[lindex].x() - shape.points[opposite_point_index].x()) * math.sin(angle)
+            y2 = y2 + shape.points[opposite_point_index].y()
+            x2 = (shape.points[lindex].y() - shape.points[opposite_point_index].y()) * math.sin(angle) + (
+                        shape.points[lindex].x() - shape.points[opposite_point_index].x()) * math.cos(angle)
+            x2 = x2 + shape.points[opposite_point_index].x()
+            shape.points[lindex] = QPointF(x2, y2)
+            # shape.sortPoints()
+            return
         shape.moveVertexBy(index, shiftPos)
 
         if self.__isShiftPressed:
@@ -449,8 +529,8 @@ class Canvas(QWidget):
             shape.moveVertexBy(rindex, rshift)
             shape.moveVertexBy(lindex, lshift)
 
-        if self.__isAltPressed:
-            # vert
+        elif self.__isAltPressed:
+            # ctrl
             if index % 2 == 0:
                 lindex = (index + 1) % 4
                 lshift = shiftPos
@@ -459,7 +539,8 @@ class Canvas(QWidget):
                 rindex = (index + 3) % 4
                 rshift = shiftPos
                 shape.moveVertexBy(rindex, rshift)
-        if self.__isCrtlPressed:
+        elif self.__isCrtlPressed:
+
             # hori
             if index % 2 == 0:
                 rindex = (index + 3) % 4
@@ -757,6 +838,12 @@ class Canvas(QWidget):
         self.__isAltPressed = bool(isAlt)
         isCrtl = event.modifiers() & Qt.ControlModifier
         self.__isCrtlPressed = bool(isCrtl)
+        if event.key()==Qt.Key_Z: #(self.__isCrtlPressed or self.__isAltPressed) and event.key()==Qt.Key_Z:
+            # print('event.key()==Qt.Key_Z')
+            self.__isRotatePressed = True
+        else:
+            self.__isRotatePressed = False
+
 
 
     def moveOnePixel(self, direction):

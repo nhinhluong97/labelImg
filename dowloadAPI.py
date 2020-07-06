@@ -84,7 +84,7 @@ def upload_gt_dir(dir_imgs, dir_gts, newName):
 
 def request_train(synDirs_chose, pretrain, numEpoch, prefixName, charlistName):
     data = {'chose': synDirs_chose, 'pretrain':str(pretrain), 'numEpoch':numEpoch,\
-            'prefixName': str(prefixName), 'charlist': charlistName, 'syn_Ratio': 0.5, 'wiki_Ratio': 0.1}
+            'prefixName': str(prefixName), 'charlist': charlistName, 'syn_Ratio': 0.5, 'wiki_Ratio': 0.2}
     print(data)
     r = requests.post(api_adress + address_train, data=json.dumps(data), )
     print('request_train done', r.status_code)

@@ -116,7 +116,14 @@ class Shape(object):
             painter.fillPath(vrtx_path, self.vertex_fill_color)
 
             # Draw text at the top-left
-            if self.paintLabel:
+            if self.paintLabel or self.fill:
+                if self.fill:
+                    color = EDIT_SELECT_LINE_COLOR
+                    pen = QPen(color)
+                    # Try using integer sizes for smoother drawing(?)
+                    pen.setWidth(max(1, int(round(2.0 / self.scale))))
+                    painter.setPen(pen)
+
                 min_x = sys.maxsize
                 min_y = sys.maxsize
                 for point in self.points:
@@ -125,7 +132,8 @@ class Shape(object):
                 if min_x != sys.maxsize and min_y != sys.maxsize:
                     font = QFont()
 
-                    size = (self.points[3].y() - self.points[0].y())*0.5
+                    size = distance(self.points[3] - self.points[0])
+                    size = 50 # max(20, min(size, 40))
                     font.setPointSize(size)
                     font.setBold(True)
                     painter.setFont(font)
@@ -300,6 +308,52 @@ class Shape(object):
             for x, y in spanbox:
                 points.append(QPointF(x, y))
 
+            self.points = points
+    def sortPoints_OLD2(self):
+        boxorg = self.convert_points_list(self.points)
+
+        boxorg = sorted(boxorg, key=lambda x: x[0]*x[1])
+        tl = boxorg[0]
+        boxorg.remove(boxorg[0])
+        print('boxorg:',boxorg)
+        br = boxorg[-1]
+        boxorg.remove(boxorg[-1])
+
+        boxorg = sorted(boxorg, key=lambda x: x[0])
+        print('boxorg:',boxorg)
+        bl = boxorg[0]
+        boxorg.remove(boxorg[0])
+        tr = boxorg[-1]
+        boxorg.remove(boxorg[-1])
+
+        tmp_box = [tl, tr, br, bl]
+        print('tmp_box:',tmp_box)
+        points = []
+        for x, y in tmp_box:
+            points.append(QPointF(x, y))
+            self.points = points
+    def sortPoints_old(self):
+        boxorg = self.convert_points_list(self.points)
+
+        boxorg = sorted(boxorg, key=lambda x: x[0]*x[1])
+        tl = boxorg[0]
+        boxorg.remove(boxorg[0])
+        print('boxorg:',boxorg)
+        br = boxorg[-1]
+        boxorg.remove(boxorg[-1])
+
+        boxorg = sorted(boxorg, key=lambda x: x[0])
+        print('boxorg:',boxorg)
+        bl = boxorg[0]
+        boxorg.remove(boxorg[0])
+        tr = boxorg[-1]
+        boxorg.remove(boxorg[-1])
+
+        tmp_box = [tl, tr, br, bl]
+        print('tmp_box:',tmp_box)
+        points = []
+        for x, y in tmp_box:
+            points.append(QPointF(x, y))
             self.points = points
 
     def highlightVertex(self, i, action):
