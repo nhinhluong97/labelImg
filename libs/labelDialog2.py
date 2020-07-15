@@ -169,9 +169,19 @@ class trainDialog(QDialog):
         self.choose = []
         self.dataLabel = QLabel('Data folders')
         grid.addWidget(self.dataLabel, 0, 1)
+
+        self.scrollArea = QScrollArea(self)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.listDataWidget = QGridLayout(self.scrollAreaWidgetContents)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        grid.addWidget(self.scrollArea, 1,1, 10, 1)
+
+        # grid.setColumnStretch(1, 5)
+
         for i, v in enumerate(listData):
             self.listDataBox[i] = QCheckBox(v)
-            grid.addWidget(self.listDataBox[i], i+1, 1)
+            self.listDataWidget.addWidget(self.listDataBox[i], i+1, 0)
 
         self.PretrainLabel = QLabel('Pretrain checkpoint')
         grid.addWidget(self.PretrainLabel, 0, 0)
@@ -189,6 +199,7 @@ class trainDialog(QDialog):
             self.charlistsBox.addItem( '{}'.format(v))
         grid.addWidget(self.charlistsBox,3, 0)
 
+
         self.numEpochLabel = QLabel('Number Epochs trainning')
         grid.addWidget(self.numEpochLabel, 4, 0)
         self.numEpochEdit = QLineEdit()
@@ -204,6 +215,9 @@ class trainDialog(QDialog):
         self.prefixNameEdit.setText('{}'.format('model_tag'))
         # self.numEpochEdit.setValidator(QIntValidator())
         grid.addWidget(self.prefixNameEdit, 7, 0)
+
+        # grid.addWidget(self.scrollArea, 0, 1)
+
 
         self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
         bb.button(BB.Ok).setIcon(newIcon('done'))

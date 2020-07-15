@@ -123,6 +123,9 @@ class Shape(object):
                     # Try using integer sizes for smoother drawing(?)
                     pen.setWidth(max(1, int(round(2.0 / self.scale))))
                     painter.setPen(pen)
+                    painter.setBackground(QColor(0,0,0))
+                    painter.setBackgroundMode( Qt.OpaqueMode)
+
 
                 min_x = sys.maxsize
                 min_y = sys.maxsize
@@ -133,7 +136,7 @@ class Shape(object):
                     font = QFont()
 
                     size = distance(self.points[3] - self.points[0])
-                    size = 50 # max(20, min(size, 40))
+                    size = max(20, min(size, 50))
                     font.setPointSize(size)
                     font.setBold(True)
                     painter.setFont(font)
