@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from fbs_runtime.application_context.PyQt5 import ApplicationContext
+# from fbs_runtime.application_context.PyQt5 import ApplicationContext
 import codecs
 import os.path
 import platform
@@ -1791,7 +1791,7 @@ class MainWindow(QMainWindow, WindowMixin):
     def upLoad(self, uploadName):
         print('uploadName: ', uploadName)
 
-        dialog = Dialog(title='Download dataset',
+        dialog = Dialog(title='Upload dataset',
                         txtt='Wait awhile, until upload {} done\n From path: {}'.format(uploadName,
                                                                                         self.defaultSaveDir))
         dialog.submit(dowloadAPI.upload_gt_dir, os.path.abspath(self.lastOpenDir),
@@ -2470,9 +2470,9 @@ def read(filename, default=None):
 
 if __name__ == '__main__':
     argv = sys.argv
-    appctxt  = ApplicationContext()
-    app = appctxt.app
-    # app = QApplication(argv)
+    # appctxt  = ApplicationContext()
+    # app = appctxt.app
+    app = QApplication(argv)
     styles.dark(app)
     app.setApplicationName(__appname__)
     app.setWindowIcon(newIcon("app"))

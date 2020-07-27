@@ -126,16 +126,16 @@ class Shape(object):
                     painter.setBackground(QColor(0,0,0))
                     painter.setBackgroundMode( Qt.OpaqueMode)
 
-
+                h_box = distance(self.points[3] - self.points[0])
                 min_x = sys.maxsize
                 min_y = sys.maxsize
                 for point in self.points:
-                    min_x = min(min_x, point.x())
-                    min_y = min(min_y, point.y())
+                    min_x = min(min_x, point.x()) - h_box*0.2
+                    min_y = min(min_y, point.y()) - h_box*0.2
                 if min_x != sys.maxsize and min_y != sys.maxsize:
                     font = QFont()
 
-                    size = distance(self.points[3] - self.points[0])
+                    size = h_box
                     size = max(20, min(size, 50))
                     font.setPointSize(size)
                     font.setBold(True)

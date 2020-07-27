@@ -135,11 +135,11 @@ class LabelDialog(QDialog):
 
     def validate(self):
         try:
-            if all([l.itemAt(0).widget().text().trimmed() for l in self.listLabel]):
+            if all([l.itemAt(0).widget().text().trimmed().replace('\n', '') for l in self.listLabel]):
                 self.accept()
         except AttributeError:
             # PyQt5: AttributeError: 'str' object has no attribute 'trimmed'
-            if all([l.itemAt(0).widget().text().strip() for l in self.listLabel]):
+            if all([l.itemAt(0).widget().text().strip().replace('\n', '') for l in self.listLabel]):
                 self.accept()
         return
 
@@ -634,7 +634,7 @@ class insideFolderDialog(QDialog):
         self.setWindowTitle(title)
         grid = QGridLayout()
 
-        self.exists_folders_label = QLabel('Exists file')
+        self.exists_folders_label = QLabel('Exists {} items'.format(len(listFiles)))
         grid.addWidget(self.exists_folders_label)
         self.setWindowModality(Qt.ApplicationModal)
         self.parent = parent
