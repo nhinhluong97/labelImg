@@ -652,7 +652,16 @@ class Canvas(QWidget):
                 if self.isEditLabel and shape.selected:
                     shape.paintForEdit(p)
                 else:
-                    shape.paint(p)
+                    shape.paintNoLabel(p)
+
+        for shape in self.shapes:
+            if (shape.selected or not self._hideBackround) and self.isVisible(shape):
+                shape.fill = shape.selected or shape == self.hShape
+                if self.isEditLabel and shape.selected:
+                    shape.paintForEdit(p)
+                else:
+                    shape.paintOnlylabel(p)
+
         if self.current:
             pass
             self.current.paint(p)

@@ -39,6 +39,10 @@ class Shape(object):
     point_type = P_ROUND
     point_size = 8
     scale = 1.0
+    warning_set = ['DAHATSU', 'DAHATSUMOTORCO.,LTD.''DAHATSU MOTOR CO.,LTD.', 'オゴションコード', 'オブションコード',\
+                   'アブライドモデル', 'アクセル', 'BULT', 'FUJ1', 'FRME', 'トリムCOLORGUARNICION', 'FAMENo.',
+                   'MODEL0', 'cc', 'モテル', 'NO.DE CHASIS', 'DE CHASIS', 'CO.,LTD. JAPAN', 'LTD', 'WO9', 'WO1', 'TYO',\
+                   'CO.LTD.JAPAN', 'MTSUBISHI', '']
 
     # def __init__(self, label=None, subLabels=[], line_color=None, difficult=False, paintLabel=False):
     def __init__(self, label=None, subLabels=[], line_color=None, paintLabel=False):
@@ -90,7 +94,10 @@ class Shape(object):
     def paint(self, painter):
         if self.points:
             color = self.select_line_color if self.selected else self.line_color
+            if self.label in Shape.warning_set or(self.label and ( ' ' in self.label or 'ブ' in self.label)):
+                color = EDIT_SELECT_LINE_COLOR
             pen = QPen(color)
+
             # Try using integer sizes for smoother drawing(?)
             pen.setWidth(max(1, int(round(2.0 / self.scale))))
             painter.setPen(pen)
@@ -130,12 +137,11 @@ class Shape(object):
                 min_x = sys.maxsize
                 min_y = sys.maxsize
                 for point in self.points:
-                    min_x = min(min_x, point.x()) - h_box*0.2
-                    min_y = min(min_y, point.y()) - h_box*0.2
+                    min_x = min(min_x, point.x()) - h_box*0
+                    min_y = min(min_y, point.y()) - h_box*0
                 if min_x != sys.maxsize and min_y != sys.maxsize:
                     font = QFont()
-
-                    size = h_box
+                    size = h_box*0.7
                     size = max(20, min(size, 50))
                     font.setPointSize(size)
                     font.setBold(True)
@@ -152,6 +158,100 @@ class Shape(object):
                 # print(color)
                 # print(color.name())
                 painter.fillPath(line_path, color)
+
+    def paintNoLabel(self, painter):
+        if self.points:
+            color = self.select_line_color if self.selected else self.line_color
+            # if self.label in Shape.warning_set or(self.label and ( ' ' in self.label or 'ブ' in self.label)):
+            #     color = EDIT_SELECT_LINE_COLOR
+            pen = QPen(color)
+
+            # Try using integer sizes for smoother drawing(?)
+            pen.setWidth(max(1, int(round(2.0 / self.scale))))
+            painter.setPen(pen)
+
+            line_path = QPainterPath()
+            vrtx_path = QPainterPath()
+
+            line_path.moveTo(self.points[0])
+            # Uncommenting the following line will draw 2 paths
+            # for the 1st vertex, and make it non-filled, which
+            # may be desirable.
+            #self.drawVertex(vrtx_path, 0)
+
+            for i, p in enumerate(self.points):
+                if self.reachMaxPoints():
+                    line_path.lineTo(p)
+                self.drawVertex(vrtx_path, i)
+            if self.isClosed():
+                line_path.lineTo(self.points[0])
+
+            painter.drawPath(line_path)
+            painter.drawPath(vrtx_path)
+            painter.fillPath(vrtx_path, self.vertex_fill_color)
+
+            if self.fill:
+                color = self.select_fill_color if self.selected else self.fill_color
+                # print(color)
+                # print(color.name())
+                painter.fillPath(line_path, color)
+
+    def paintOnlylabel(self, painter):
+        if self.points:
+            color = self.select_line_color if self.selected else self.line_color
+            # if self.label in Shape.warning_set or(self.label and ( ' ' in self.label or 'ブ' in self.label)):
+            #     color = EDIT_SELECT_LINE_COLOR
+            pen = QPen(color)
+
+            # Try using integer sizes for smoother drawing(?)
+            pen.setWidth(max(1, int(round(2.0 / self.scale))))
+            painter.setPen(pen)
+
+            line_path = QPainterPath()
+            vrtx_path = QPainterPath()
+
+            line_path.moveTo(self.points[0])
+            # Uncommenting the following line will draw 2 paths
+            # for the 1st vertex, and make it non-filled, which
+            # may be desirable.
+            #self.drawVertex(vrtx_path, 0)
+
+            painter.drawPath(line_path)
+            painter.drawPath(vrtx_path)
+            painter.fillPath(vrtx_path, self.vertex_fill_color)
+
+            # Draw text at the top-left
+            if self.paintLabel or self.fill:
+                if self.fill:
+                    color = EDIT_SELECT_LINE_COLOR
+                    pen = QPen(color)
+                    # Try using integer sizes for smoother drawing(?)
+                    pen.setWidth(max(1, int(round(2.0 / self.scale))))
+                    painter.setPen(pen)
+                    painter.setBackground(QColor(0,0,0))
+                    painter.setBackgroundMode( Qt.OpaqueMode)
+
+
+                min_x = sys.maxsize
+                min_y = sys.maxsize
+                for point in self.points:
+                    min_x = min(min_x, point.x())
+                    min_y = min(min_y, point.y())
+                if min_x != sys.maxsize and min_y != sys.maxsize:
+                    font = QFont()
+
+                    size = distance(self.points[3] - self.points[0])
+                    size = max(20, min(size, 50))
+                    font.setPointSize(size)
+                    font.setBold(True)
+                    painter.setFont(font)
+                    if(self.label == None):
+                        self.label = ""
+                    if(min_y < MIN_Y_LABEL):
+                        min_y += MIN_Y_LABEL
+                    # painter.drawText(min_x, min_y, self.label)
+                    painter.drawText(min_x, min_y, '|'.join([self.label] + self.subLabels))
+
 
     def paintForEdit(self, painter):
         # print('paintForEdit')
