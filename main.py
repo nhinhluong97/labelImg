@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# from fbs_runtime.application_context.PyQt5 import ApplicationContext
+from fbs_runtime.application_context.PyQt5 import ApplicationContext
 import codecs
 import os.path
 import platform
@@ -1416,9 +1416,9 @@ class MainWindow(QMainWindow, WindowMixin):
             self.setWindowTitle(__appname__ + ' ' + filePath)
 
             # Default : select last item if there is at least one item
-            if self.labelList.topLevelItemCount():
-                self.labelList.setCurrentItem(self.labelList.topLevelItem(self.labelList.topLevelItemCount() - 1))
-                self.labelList.topLevelItem(self.labelList.topLevelItemCount() - 1).setSelected(True)
+            # if self.labelList.topLevelItemCount():
+            #     self.labelList.setCurrentItem(self.labelList.topLevelItem(self.labelList.topLevelItemCount() - 1))
+            #     self.labelList.topLevelItem(self.labelList.topLevelItemCount() - 1).setSelected(True)
 
             self.canvas.setFocus(True)
             return True
@@ -2470,9 +2470,9 @@ def read(filename, default=None):
 
 if __name__ == '__main__':
     argv = sys.argv
-    # appctxt  = ApplicationContext()
-    # app = appctxt.app
-    app = QApplication(argv)
+    appctxt  = ApplicationContext()
+    app = appctxt.app
+    # app = QApplication(argv)
     styles.dark(app)
     app.setApplicationName(__appname__)
     app.setWindowIcon(newIcon("app"))
