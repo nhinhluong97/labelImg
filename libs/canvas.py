@@ -205,7 +205,8 @@ class Canvas(QWidget):
                     self.hShape.highlightClear()
                 self.hVertex, self.hShape = index, shape
                 shape.highlightVertex(index, shape.MOVE_VERTEX)
-                self.overrideCursor(CURSOR_POINT)
+                self.overrideCursor(CURSOR_DEFAULT)
+                # self.overrideCursor(CURSOR_POINT)
                 # self.setToolTip("Click & drag to move point")
                 # self.setStatusTip(self.toolTip())
                 self.update()
@@ -219,6 +220,7 @@ class Canvas(QWidget):
                     # self.setToolTip(
                     #     "Click & drag to move shape '%s'" % shape.label)
                     # self.setStatusTip(self.toolTip())
+
                     self.overrideCursor(CURSOR_GRAB)
                     self.update()
                     break
@@ -243,7 +245,8 @@ class Canvas(QWidget):
                     self.hShape.highlightClear()
                 self.hVertex, self.hShape = index, shape
                 shape.highlightVertex(index, shape.MOVE_VERTEX)
-                self.overrideCursor(CURSOR_POINT)
+                self.overrideCursor(CURSOR_DEFAULT)
+                # self.overrideCursor(CURSOR_POINT)
                 self.setToolTip("Click & drag to move point")
                 self.setStatusTip(self.toolTip())
                 self.update()
@@ -919,6 +922,7 @@ class Canvas(QWidget):
 
     def loadPixmap(self, pixmap):
         self.pixmap = pixmap
+        self.epsilon = max(self.pixmap.width()//300, 2)
         self.shapes = []
         self.repaint()
 
