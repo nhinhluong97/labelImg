@@ -163,7 +163,7 @@ class trainDialog(QDialog):
         super(trainDialog, self).__init__()
         title = 'Setting To Start Training'
         self.setWindowTitle(title)
-
+        listData = sorted(listData)
         self.listDataBox = len(listData)*['']
         grid = QGridLayout()
         self.choose = []
@@ -283,6 +283,38 @@ class choose_checkpoint(QDialog):
         else:
             print("must choose")
 
+
+    def get_chose(self):
+        return self.choose if self.exec_() else None
+
+class set_api_adress(QDialog):
+
+    def __init__(self, parent=None):
+        super(set_api_adress, self).__init__()
+        self.setWindowTitle('set IP adress of server')
+
+        self.parent = parent
+        self.cur_api_adress = self.parent.api_adress
+        grid = QGridLayout()
+
+        self.buttonBox = bb = BB(BB.Ok | BB.Cancel, Qt.Horizontal, self)
+        bb.button(BB.Ok).setIcon(newIcon('done'))
+        bb.button(BB.Ok).setText('Choose')
+
+        self.lineEdit = QLineEdit()
+        self.lineEdit.setText('{}'.format(self.cur_api_adress))
+        grid.addWidget(self.lineEdit)
+
+        bb.button(BB.Cancel).setIcon(newIcon('undo'))
+        bb.accepted.connect(self.accept_api_adress)
+        bb.rejected.connect(self.reject)
+        grid.addWidget(bb)
+        self.resize(self.sizeHint())
+        self.setLayout(grid)
+
+    def accept_api_adress(self):
+        self.choose = self.lineEdit.text()
+        self.accept()
 
     def get_chose(self):
         return self.choose if self.exec_() else None

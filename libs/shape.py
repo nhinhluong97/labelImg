@@ -40,16 +40,17 @@ class Shape(object):
     point_size = 8
     scale = 1.0
 
-    warning_set = ['DAHATSU', 'DAHATSUMOTORCO.,LTD.''DAHATSU MOTOR CO.,LTD.', 'オゴションコード', 'オブションコード',\
-                   'アブライドモデル', 'アクセル', 'BULT', 'FUJ1', 'FRME', 'トリムCOLORGUARNICION', 'FAMENo.', '車号番号',
+    warning_set = ['DAHATSU', 'DAHATSUMOTORCO.,LTD.''DAHATSU MOTOR CO.,LTD.', 'オゴションコード', 'オブションコード', 'TRANS./AMLE', 'TRANS./ANLE'
+                   'アブライドモデル', 'アクセル', 'BULT', 'FUJ1', 'FRME', 'FRANE', 'トリムCOLORGUARNICION', 'FAMENo.', '車号番号',
                    'MODEL0', 'cc', 'モテル', 'NO.DE CHASIS', 'DE CHASIS', 'CO.,LTD. JAPAN', 'LTD', 'WO9', 'WO1', 'TYO',\
-                   'CO.LTD.JAPAN', 'MTSUBISHI', '']
-    Okeys = ['TIPO', 'NO','CHASSIS NO','CHASSIS NO.','NO.', 'NO.DE', 'NO.DECHASIS',  'MODEL', 'MODELO', 'COLOR.', 'COLOR,', 'NO.:MS903081', 'NO.:MS903080', 'OCCUPANTS', 'COMM.-NO.',  'CHASSIS.-NO.',
+                   'CO.LTD.JAPAN', 'MTSUBISHI','MITSUBISH', '']
+    Okeys = ['TIPO', 'NO','CHASSIS NO','CHASSIS NO.','NO.', 'NO.DE', 'NO.DECHASIS',  'MODEL', 'MODEL:', 'MODELO', 'COLOR.', 'COLOR,', 'NO.:MS903081', 'NO.:MS903080', 'OCCUPANTS', 'COMM.-NO.',  'CHASSIS.-NO.',
              'COLOR', 'CORPORATION','COLOR,GUARNICION', 'COLOR,TRIM', 'カラーCOLOR,TRIM', 'GUARNICION', 'CODE', 'Option', 'トリムCOLOR,GUARNICION','PAYLOAD', 'ID.NO.:',
              'MOTOR','MOTORS', 'TOYOTA', 'CO.,LTD.', 'CO.,LTD.JAPAN', 'DAIHATSUMOTORCO.,LTD.', 'OPコード', 'OPTION', 'OPT', 'COLOR,INT',  'COLOR.INT', 'ジンMOTOR']
 
     # def __init__(self, label=None, subLabels=[], line_color=None, difficult=False, paintLabel=False):
-    def __init__(self, label=None, subLabels=[], line_color=None, paintLabel=False):
+    def __init__(self, label=None, subLabels=[], line_color=None, paintLabel=False, warning=False):
+        self.warning = warning
         self.label = label
         self.subLabels = subLabels
         self.points = []
@@ -166,10 +167,11 @@ class Shape(object):
     def paintNoLabel(self, painter):
         if self.points:
             color = self.select_line_color if self.selected else self.line_color
-            if self.label in Shape.warning_set or(self.label and ( ' ' in self.label or 'ブ' in self.label)):
-                color = EDIT_SELECT_LINE_COLOR
-            if self.label and 'O' in self.label and self.label not in Shape.Okeys:
-                color = EDIT_SELECT_LINE_COLOR
+            if self.warning:
+                if self.label in Shape.warning_set or(self.label and ( ' ' in self.label or 'ブ' in self.label or 'マ' in self.label)):
+                    color = EDIT_SELECT_LINE_COLOR
+                if self.label and 'O' in self.label and self.label not in Shape.Okeys:
+                    color = EDIT_SELECT_LINE_COLOR
             pen = QPen(color)
 
             # Try using integer sizes for smoother drawing(?)
@@ -204,8 +206,9 @@ class Shape(object):
     def paintOnlylabel(self, painter):
         if self.points:
             color = self.select_line_color if self.selected else self.line_color
-            if self.label in Shape.warning_set or(self.label and ( ' ' in self.label or 'ブ' in self.label)):
-                color = EDIT_SELECT_LINE_COLOR
+            if self.warning:
+                if self.label in Shape.warning_set or(self.label and ( ' ' in self.label or 'ブ' in self.label)):
+                    color = EDIT_SELECT_LINE_COLOR
             pen = QPen(color)
 
             # Try using integer sizes for smoother drawing(?)

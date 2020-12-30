@@ -9,8 +9,8 @@ import time
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'datasets')
-# api_adress = 'http://54.249.71.234:5555'
-api_adress = 'http://54.249.71.234:5050'
+api_adress = 'http://18.180.27.178:5050'
+# api_adress = 'http://54.249.71.234:5050'
 
 address_test_file = '/api/process'
 address_upload_gt_dir = '/api/upload_gtdir'
@@ -63,7 +63,7 @@ def request_current_synDir():
     data = {'request': True}
     r = requests.post(api_adress + address_current_synDir, data=data )
     print(r.json())
-    print('request_current_synDir done', r.status_code)
+    print('request_current_synDir done',api_adress, r.status_code)
     return r.json(), r.status_code
 
 def upload_gt_dir(dir_imgs, dir_gts, newName):
@@ -77,17 +77,17 @@ def upload_gt_dir(dir_imgs, dir_gts, newName):
         files=files
     )
     num = len(os.listdir(dir_gts))
-    print('upload {} files time: {}'.format(num * 2, time.time() - begin), res.status_code)
+    print('upload {} files time: {}'.format(num * 2, time.time() - begin), api_adress, res.status_code)
     # os.remove(zipPath)
     mess = None if res.status_code == 200 else res.json()['mess']
     return mess, res.status_code
 
 def request_train(synDirs_chose, pretrain, numEpoch, prefixName, charlistName):
     data = {'chose': synDirs_chose, 'pretrain':str(pretrain), 'numEpoch':numEpoch,\
-            'prefixName': str(prefixName), 'charlist': charlistName, 'syn_Ratio': 0.5, 'wiki_Ratio': 0.1, 'learning_rate':5e-6}
+            'prefixName': str(prefixName), 'charlist': charlistName, 'syn_Ratio': 0.6, 'wiki_Ratio': 0.1, 'learning_rate':2e-5, 'use_hard_syn_gen':True}
     print(data)
     r = requests.post(api_adress + address_train, data=json.dumps(data), )
-    print('request_train done', r.status_code)
+    print('request_train done', api_adress, r.status_code)
     mess = None if r.status_code==200 else r.json()['mess']
     return mess , r.status_code
 
@@ -111,7 +111,7 @@ def request_train_status():
     else:
         df = pd.DataFrame(columns=('name', 'loss', 'time', 'best', 'note'))
         training_log = None
-    print('request_train_status done', r.status_code)
+    print('request_train_status done', api_adress, r.status_code)
     print('training_log',training_log)
     return df, training_log, r.status_code
 
@@ -124,7 +124,7 @@ def request_trainning_history(cpt_name):
     else:
         ret = pd.DataFrame(columns=('name', 'loss', 'time', 'best', 'note'))
 
-    print('request_trainning_history done:', r.status_code)
+    print('request_trainning_history done:', api_adress, r.status_code)
     return ret, r.status_code
 
 def request_current_trainning_log():
@@ -142,13 +142,13 @@ def request_current_trainning_log():
     if r.status_code == 400:
         print(r.json(), r.status_code)
 
-    print('request_current_trainning_log done:', r.status_code)
+    print('request_current_trainning_log done:', api_adress, r.status_code)
     return df, training_log, r.status_code
 
 def request_stop_training():
     data = {'request': True}
     r = requests.post(api_adress + address_stop_training, data=data)
-    print('request_stop_training done:', r.status_code)
+    print('request_stop_training done:', api_adress, r.status_code)
     return r.status_code
 
 
@@ -156,7 +156,7 @@ def request_save_notes(notes, dir_path):
     data = {'notes': notes, 'dir_path': dir_path}
     print(data)
     r = requests.post(api_adress + address_save_notes, data=json.dumps(data))
-    print('request_save_notes done', r.status_code)
+    print('request_save_notes done', api_adress, r.status_code)
     return r.status_code
 
 def request_all_checkpoints():
@@ -172,14 +172,14 @@ def request_all_checkpoints():
         curCpt = None
 
     listcheck = df['name']
-    print('request_all_checkpoints done', r.status_code)
+    print('request_all_checkpoints done', api_adress, r.status_code)
     return listcheck, curCpt, r.status_code
 
 
 def sent_checkpoint_chose(checkpoint_chose):
     data = {'chose': checkpoint_chose}
     r = requests.post(api_adress + address_checkpoint_chose, data=data)
-    print('sent_checkpoint_chose done')
+    print('sent_checkpoint_chose done',  api_adress,)
     mess = None if r.status_code == 200 else r.json()['mess']
     return mess, r.status_code
 
@@ -187,7 +187,7 @@ def down_checkpoint_chose(checkpoint_chose):
     data = {'chose': checkpoint_chose}
     r = requests.post(api_adress + address_down_checkpoint, data=data)
     # r = requests.post(api_adress + '/down_checkpoint', data=data)
-    print('down_checkpoint_chose done')
+    print('down_checkpoint_chose done',  api_adress,)
     # print(r.json())
     if r.status_code==200:
         return r, r.headers['filename'], r.status_code
@@ -218,7 +218,7 @@ def downloadHint(in_dir, out_dir):
             with open(os.path.join(out_dir, name), 'w', encoding='utf-8') as w:
                 w.write(text)
 
-    print('process times {}: {} '.format(len(file_list), time.time() - begin), res.status_code)
+    print('process times {}: {} '.format(len(file_list), time.time() - begin), api_adress, res.status_code)
     mess = None if res.status_code == 200 else res.json()['mess']
     return mess, res.status_code
     # except Exception as e:
@@ -227,20 +227,20 @@ def downloadHint(in_dir, out_dir):
 def request_list_data_dir():
     data = {'request': True}
     r = requests.post(api_adress + address_list_data_dir, data=data )
-    print('request_list_data_dir done', r.status_code)
+    print('request_list_data_dir done', api_adress, r.status_code)
     return r.json(), r.status_code
 
 def request_view_data():
     data = {'request': True}
     r = requests.post(api_adress + address_view_data, data=data)
-    print('request_view_data done', r.status_code)
+    print('request_view_data done', api_adress, r.status_code)
     ret = r.json()
     return ret, r.status_code
 
 def request_del_data(folderName):
     data = {'request': True, 'dataname': folderName}
     r = requests.post(api_adress + address_del_data, data=data)
-    print('request_del_data done', r.status_code)
+    print('request_del_data done', api_adress, r.status_code)
     mess = None if r.status_code == 200 else r.json()['mess']
     return mess, r.status_code
 
@@ -257,7 +257,7 @@ def request_down_data(folderName, saveDir):
                     f.write(chunk)
         shutil.unpack_archive(save_path, extract_dir=os.path.splitext(save_path)[0])
 
-    print('request_down_data done', res.status_code)
+    print('request_down_data done', api_adress, res.status_code)
 
     mess = None if res.status_code == 200 else res.json()['mess']
     return mess, res.status_code
@@ -310,7 +310,7 @@ def downloadServerData(dataname, saveDir, data_refdir):
         # if os.path.exists(os.path.join(DATA_DIR, 'tmp.zip')):
         #     os.remove(os.path.join(DATA_DIR, 'tmp.zip'))
 
-    print('process download: {} '.format(time.time() - begin), res.status_code)
+    print('process download: {} '.format(time.time() - begin), api_adress, res.status_code)
     mess = None if res.status_code == 200 else res.json()['mess']
     return mess, res.status_code
     # except Exception as e:

@@ -162,6 +162,9 @@ class MainWindow(QMainWindow, WindowMixin):
         self.settings = Settings(path=os.path.join(BASE_DIR, 'labelImgSettings.pkl'))
         self.settings.load()
         settings = self.settings
+        self.api_adress = self.settings[API_ADRESS]
+        dowloadAPI.api_adress = self.api_adress
+        print('self.api_adress:',self.api_adress)
 
         # Load string bundle for i18n
         self.stringBundle = StringBundle.getBundle()
@@ -352,6 +355,9 @@ class MainWindow(QMainWindow, WindowMixin):
 
         checkpoint= action('Switch Checkpoint', self.choose_checkpoint,
                       None, 'switch_checkpoint', 'Choose checkpoint will use for product')
+
+        set_api_adress= action('set_api_adress', self.set_api_adress,
+                      None, 'set_api_adress', 'set IP adress of server')
 
         # downloadCheckpoint= action('download checkpoint', self.download_checkpoint,
         #               None, 'download', 'choose checkpoint will download')
@@ -558,7 +564,7 @@ class MainWindow(QMainWindow, WindowMixin):
         addActions(self.menus.file,
                    (opendir, importServerData, changeSavedir, openAnnotation, self.menus.recentFiles, save, saveAs, close, resetAll, quit))
         addActions(self.menus.help, (help, showInfo))
-        addActions(self.menus.server, (download, upLoadBtn, upCharlistBtn, train, checkpoint, trainStatus, viewServerDataBtn))
+        addActions(self.menus.server, (download, upLoadBtn, upCharlistBtn, train, checkpoint, trainStatus, set_api_adress, viewServerDataBtn))
         # addActions(self.menus.server, (download, upLoadBtn, train, checkpoint, downloadCheckpoint, trainStatus))
         addActions(self.menus.view, (
             self.autoSaving,
@@ -1490,6 +1496,7 @@ class MainWindow(QMainWindow, WindowMixin):
         settings[SETTING_AUTO_SAVE] = self.autoSaving.isChecked()
         settings[SETTING_SINGLE_CLASS] = self.singleClassMode.isChecked()
         settings[SETTING_PAINT_LABEL] = self.displayLabelOption.isChecked()
+        settings[API_ADRESS] = self.api_adress
         settings.save()
 
     def loadRecent(self, filename):
@@ -2064,6 +2071,11 @@ class MainWindow(QMainWindow, WindowMixin):
             dialog.exec_()
         else:
             print('checkpoint_chose is None')
+
+    def set_api_adress(self, _value=False):
+        chooseWind = labelDialog2.set_api_adress(parent=self)
+        self.api_adress = chooseWind.get_chose()
+        dowloadAPI.api_adress=self.api_adress
 
     def down_save_checkpoint(self, checkpoint_chose):
 
