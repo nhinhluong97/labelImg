@@ -162,7 +162,11 @@ class MainWindow(QMainWindow, WindowMixin):
         self.settings = Settings(path=os.path.join(BASE_DIR, 'labelImgSettings.pkl'))
         self.settings.load()
         settings = self.settings
-        self.api_adress = self.settings[API_ADRESS]
+        if self.settings[API_ADRESS]:
+            self.api_adress = self.settings[API_ADRESS]
+        else:
+            self.settings[API_ADRESS] = dowloadAPI.api_adress
+            self.api_adress = self.settings[API_ADRESS]
         dowloadAPI.api_adress = self.api_adress
         print('self.api_adress:',self.api_adress)
 
