@@ -2078,7 +2078,9 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def set_api_adress(self, _value=False):
         chooseWind = labelDialog2.set_api_adress(parent=self)
-        self.api_adress = chooseWind.get_chose()
+        api_adress = chooseWind.get_chose()
+        if api_adress:
+            self.api_adress = api_adress
         dowloadAPI.api_adress=self.api_adress
 
     def down_save_checkpoint(self, checkpoint_chose):
